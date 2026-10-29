@@ -1,63 +1,82 @@
-# Sonorización del bar (TP VR)
+# Sonorización del bar (TP VR) — versión simple con Steam Audio
 
-Un bar común, sin guion: el lugar donde alguien jugaba al pool con su papá o a los dardos con amigos.
-El sonido hace que el bar esté vivo aunque todavía no haya personas, y deja preparados los juegos para cuando sean jugables.
+Un bar común, a última hora: suena la música del parlante, llueve afuera, la cocina trabaja detrás de su puerta
+y la barra hace sus ruidos de siempre. Por ahora no hay voces.
 Todos los sonidos son grabaciones existentes con licencia CC0 o CC BY (ver `CREDITOS_AUDIO.md`).
 
-## Cómo se usa
+## Cómo funciona
 
-- En Unity, menú **Bar Audio → 2. Construir audio en la escena**: crea (o recrea) el objeto `Audio (Bar)` con todas las fuentes.
-- **Bar Audio → 1. Reimportar sonidos**: vuelve a aplicar los ajustes de importación optimizados.
-- Para probar sin celular: en Play, mantener **clic derecho** en la vista Game y mover el mouse para girar la cabeza.
-- Para escuchar el "recuerdo": mirar fijo la mesa de pool, el tablero de dardos o el arcade ~2 segundos.
+- **Steam Audio** es el spatializer del proyecto (*Project Settings → Audio → Spatializer Plugin: Steam Audio Spatializer*).
+  El `Steam Audio Manager` se crea solo al dar Play; no hay que agregar nada a la cámara.
+- En la escena, todo el sonido está bajo el objeto **`Audio (Bar)`**, en cuatro grupos: `Musica`, `Ambiente`, `Foley` y `Juegos`.
+- Cada sonido es un GameObject con tres componentes:
+  1. **AudioSource**: 3D, *Spatialize* activado, rolloff logarítmico con *Min/Max Distance* según el tamaño del salón, Doppler en 0.
+  2. **Steam Audio Source**: HRTF binaural, atenuación por distancia (*Curve Driven*: usa la curva del AudioSource) y absorción del aire.
+  3. **BarSound** (`Assets/Scripts/Audio/BarSound.cs`): qué clips suenan y cuándo.
+     - `loop` activado: ambiente que suena siempre, arranca en un punto al azar del archivo.
+     - `loop` desactivado: elige un clip al azar (sin repetir el anterior), lo reproduce y espera `gap` segundos.
+     - `volume` y `pitch`: rango al azar en cada disparo, para que no se note la repetición.
+- Además queda una `AudioReverbZone` ("Reverb del salon", ladrillo + madera, ~1,1 s).
 
-## Qué cubre cada punto de la consigna
+## Fuentes
+
+| Grupo | Objeto | Sonido | Cómo suena |
+|---|---|---|---|
+| Musica | Parlante (musica del bar) | M1, M2, M3 | Playlist al azar desde la esquina trasera derecha, 4–8 s de silencio entre temas |
+| Ambiente | Lluvia ventana izq. / der. | A3 | Loop, apagada "a través del vidrio" |
+| Ambiente | Cocina (detras de la puerta) | A4 | Loop, apagada "a través de la puerta" |
+| Ambiente | Heladera de cervezas | A6 | Loop, zumbido detrás de la barra |
+| Ambiente | Neon palmera / Neon cartel EXIT | A5 | Loop, cada uno con otro pitch |
+| Ambiente | Arcade fuera de servicio | A7 | Loop, zumbido eléctrico |
+| Foley | Canilla, Abrir botella, Vasos, Hielo, Caja registradora, Botellas, Banquetas | F6, F7, F8, F9, F10, F11, F13 | Cada tanto, desde la barra |
+| Foley | Puerta entrada / Puerta cocina | F4, F5 | Alguien entra o sale (se escucha, no se ve) |
+| Juegos | Pool | F1, F2, F3 | Apertura, choques y bola a la tronera |
+| Juegos | Dardos | F12 | Dardo que se clava en el tablero |
+
+### Sonidos "del otro lado" (oclusión de Steam Audio sin geometría)
+
+La lluvia y la cocina usan la **oclusión y transmisión de Steam Audio con valores fijos** (*Occlusion Input* y
+*Transmission Input* en *User Defined*), así no hace falta exportar la geometría de la escena:
+
+| Fuente | Occlusion Value | Transmission (low / mid / high) |
+|---|---|---|
+| Lluvia (vidrio) | 0 | 0.8 / 0.45 / 0.2 |
+| Cocina (puerta de madera) | 0 | 0.45 / 0.15 / 0.05 |
+
+Occlusion 0 = el camino directo está tapado; la transmisión dice cuánto pasa en graves, medios y agudos.
+Para que suenen más o menos apagadas, se cambian esos tres valores en el Steam Audio Source.
+
+## Agregar un sonido nuevo
+
+1. Crear un objeto vacío dentro del grupo que corresponda y ubicarlo donde está la fuente.
+2. *Add Component → BarSound*: agrega solo el AudioSource y el Steam Audio Source ya configurados.
+3. Arrastrar los clips a `clips`, elegir `loop` o un `gap`, y ajustar *Volume* y *Min/Max Distance* en el AudioSource.
+
+Ajustes de importación recomendados (los que ya tienen los `.meta` de `Assets/Sounds`):
+música en *Streaming* + Vorbis, ambientes en *Compressed In Memory* + Vorbis, foley en *Decompress On Load* + ADPCM,
+todo a 44,1 kHz y en **mono** (una fuente 3D se colapsa a un punto: el estéreo solo gasta).
+
+## Probar
+
+- Con auriculares (el HRTF solo se percibe así). En Play, mantener **clic derecho** en la vista Game y mover el mouse
+  para girar la cabeza (`EditorMouseLook`).
+- Para silenciar un sonido mientras se prueba, desactivar su GameObject.
+
+## Qué cubre de la consigna
 
 | Punto | Dónde está |
 |---|---|
-| **Foley** | Canilla de cerveza, botellas, vasos (9 tomas), hielo, caja registradora, banquetas, puertas, bolas de pool, dardos. Cada disparo varía clip, volumen, pitch y posición (`RandomOneShots`). |
-| **Voz** | Murmullo (*walla*) de fondo y en tres mesas, risas, festejos de los jugadores de pool. |
-| **Música diegética** | Dos parlantes del bar (`MusicPlaylist`) sincronizados con `PlayScheduled`, filtrados como parlante (sin graves profundos ni agudos extremos). |
-| **Música extradiegética** | *Sad Trio* en 2D (no sale de ningún lugar del bar), solo durante el recuerdo (`MemoryLayer`). |
-| **Silencio** | Entre canción y canción hay 6–12 s sin música: aparecen el neón, la heladera y la lluvia. En el recuerdo el bar baja 10 dB y se filtra (snapshot *Recuerdo*): un silencio relativo. |
-| **Sonido diegético / fuera de campo** | Lluvia de la calle por las ventanas y la puerta, cocina detrás de su puerta, gente que entra y sale (se escucha y no se ve). |
-| **Espacialización** | Todas las fuentes de objetos son 3D con atenuación logarítmica y distancias ajustadas al salón; *spread* amplio para ventanas y murmullo, puntual para objetos. Reverb del salón (`AudioReverbZone`, ladrillo + madera, ~1,1 s). Oclusión simple: lo que está detrás de una puerta suena bajo y filtrado, y se abre cuando la puerta se abre (`DoorAudio`). |
-| **Optimización** | Ver abajo. |
-
-## Mixer (`Assets/Sounds/BarMixer.mixer`)
-
-```
-Master
-├── Bar  (Lowpass Simple)   ← se aleja en el recuerdo
-│   ├── Musica
-│   ├── Ambiente
-│   ├── Foley
-│   └── Voces
-├── Juegos                  ← pool, dardos, arcade: siguen claros en el recuerdo
-└── Recuerdo                ← música extradiegética
-```
-
-Snapshots: **Normal** (Bar 0 dB, filtro abierto) y **Recuerdo** (Bar −10 dB, filtro a 1100 Hz, Juegos −2 dB). `MemoryLayer` mezcla los dos según hacia dónde mira el participante.
-
-## Optimización
-
-- **Importación** (`BarAudioImporter`): música en *Streaming* (no ocupa RAM), ambientes en *Compressed In Memory* Vorbis, foley y voces en *Decompress On Load* ADPCM (latencia mínima, casi sin CPU). Todo a 44,1 kHz (había originales a 96 kHz) y en **mono** salvo la cama estéreo del murmullo: una fuente 3D se colapsa a un punto, el estéreo solo gasta.
-- Loops con crossfade (no hay clic en el punto de loop) y arranque en un punto al azar: un mismo archivo sirve para varias fuentes sin sonar "en fase".
-- One-shots con 1–2 `AudioSource` reutilizables (nada de `PlayClipAtPoint`, que crea y destruye objetos).
-- La música del recuerdo solo se decodifica mientras suena (se pausa al salir).
-- Doppler en 0 (nada se mueve rápido) y ~25 voces sonando como máximo (el límite real es 32).
-- Material nivelado antes de importar: ambientes a −23 LUFS, one-shots con pico a −1 dBFS, canciones igualadas entre sí.
-
-## Cuando los juegos sean jugables
-
-- **Pool**: apagar `simulateGames` en `Juegos/Pool` y llamar a `OnBallHit(punto, velocidad)` / `OnBallPocketed(punto)` desde las bolas.
-- **Dardos / vasos / bolas**: `CollisionSound` reproduce un sonido al chocar con volumen según la velocidad.
-- **Puertas**: `DoorAudio.OpenAndClose()` cuando entra un personaje. Para animar la hoja hay que sacarle *Static* a la puerta y agruparla con la manija.
-- **HRTF**: si se instala un spatializer (Steam Audio, Resonance, Meta XR Audio) en *Project Settings → Audio*, al volver a construir las fuentes 3D lo usan solas.
+| **Foley** | Canilla, botella, vasos (9 tomas), hielo, caja, botellas, banquetas, puertas, pool y dardos, con variación de clip, volumen y pitch. |
+| **Música diegética** | El parlante del bar (fuente 3D). |
+| **Silencio** | Entre canción y canción quedan 4–8 s sin música: aparecen el neón, la heladera y la lluvia. |
+| **Fuera de campo** | Lluvia de la calle, cocina detrás de su puerta y gente que entra o sale. |
+| **Espacialización** | Steam Audio: HRTF, distancia, absorción del aire y oclusión/transmisión. Reverb del salón. |
+| **Optimización** | 19 fuentes (límite real 32), sin mixer, `BarSound` sin Update (solo corrutinas), importación por tipo de sonido y todo en mono. |
+| **Voz / música extradiegética** | Fuera por ahora. La versión anterior (voces, murmullo y capa de "recuerdo") queda en la rama `sound-test`. |
 
 ## Archivos
 
-- `Assets/Sounds/` — Musica, Ambiente, Foley, Voces (procesados) + `BarMixer.mixer`.
-- `Assets/Scripts/Audio/` — `LoopEmitter`, `RandomOneShots`, `MusicPlaylist`, `PoolGameSimulator`, `DoorAudio`, `MemoryLayer`, `CollisionSound`, `EditorMouseLook`.
-- `Assets/Scripts/Audio/Editor/` — `BarAudioImporter`, `BarAudioSceneBuilder`.
+- `VR-Bar-Game/Assets/Sounds/` — Musica, Ambiente y Foley (procesados).
+- `VR-Bar-Game/Assets/Scripts/Audio/` — `BarSound` y `EditorMouseLook`.
+- `VR-Bar-Game/Assets/Plugins/SteamAudio/` — plugin Steam Audio 4.8.1 (configuración en `Resources/SteamAudioSettings.asset`).
 - `Audio_Originales/` (no se sube a git) — descargas originales; se pueden volver a bajar con los links de `CREDITOS_AUDIO.md`.

@@ -20,10 +20,9 @@ Para volver a bajarlos: Freesound pide una cuenta gratuita para el botón *Downl
 
 | # | Uso en la escena | Tema | Descarga |
 |---|---|---|---|
-| M1 | Diegética: parlantes del bar (playlist) | Rollin at 5 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Rollin%20at%205.mp3 |
-| M2 | Diegética: parlantes del bar (playlist) | Bass Walker | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Bass%20Walker.mp3 |
-| M3 | Diegética: parlantes del bar (playlist) | Night on the Docks - Sax | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Night%20on%20the%20Docks%20-%20Sax.mp3 |
-| M4 | **Extradiegética**: capa de "recuerdo" al mirar los juegos (2D) | Sad Trio | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Sad%20Trio.mp3 |
+| M1 | Diegética: parlante del bar (playlist) | Rollin at 5 | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Rollin%20at%205.mp3 |
+| M2 | Diegética: parlante del bar (playlist) | Bass Walker | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Bass%20Walker.mp3 |
+| M3 | Diegética: parlante del bar (playlist) | Night on the Docks - Sax | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Night%20on%20the%20Docks%20-%20Sax.mp3 |
 
 Texto de crédito (formato pedido por el autor, uno por tema):
 
@@ -39,20 +38,14 @@ https://creativecommons.org/licenses/by/4.0/
 "Night on the Docks - Sax" Kevin MacLeod (incompetech.com)
 Licensed under Creative Commons: By Attribution 4.0
 https://creativecommons.org/licenses/by/4.0/
-
-"Sad Trio" Kevin MacLeod (incompetech.com)
-Licensed under Creative Commons: By Attribution 4.0
-https://creativecommons.org/licenses/by/4.0/
 ```
 
 ## Ambiente
 
 | # | Uso en la escena | Sonido | Autor | Licencia |
 |---|---|---|---|---|
-| A1 | Murmullo de fondo, fin de la noche (cama 2D) | [Bar Crowd - Logans Pub - Feb 2007](https://freesound.org/people/lonemonk/sounds/31487/) | lonemonk | CC BY 4.0 |
-| A2 | Murmullo espacializado en las mesas (3D) | [Bar crowd ambience](https://freesound.org/people/wjb_88/sounds/828867/) | wjb_88 | CC0 |
-| A3 | Lluvia/ciudad afuera (ventanas y puerta) | [City rain 001 [3am]](https://freesound.org/people/eloquentsleep/sounds/174648/) | eloquentsleep | CC0 |
-| A4 | Cocina detrás de la puerta (filtrado) | [Kitchen Ambience](https://freesound.org/people/brunoboselli/sounds/512511/) | brunoboselli | CC0 |
+| A3 | Lluvia/ciudad afuera (ventanas) | [City rain 001 [3am]](https://freesound.org/people/eloquentsleep/sounds/174648/) | eloquentsleep | CC0 |
+| A4 | Cocina detrás de la puerta (apagada con transmisión de Steam Audio) | [Kitchen Ambience](https://freesound.org/people/brunoboselli/sounds/512511/) | brunoboselli | CC0 |
 | A5 | Zumbido del neón (palmera + cartel EXIT) | [JM_NOIZ_Buzz 01 - Neon Light](https://freesound.org/people/Julien_Matthey/sounds/118340/) | Julien_Matthey | CC0 |
 | A6 | Heladera de cervezas detrás de la barra | [Vending Machines - Hum 2](https://freesound.org/people/portwain/sounds/261135/) | portwain | CC0 |
 | A7 | Arcade roto ("Out of Order") | [electrical_hum_01](https://freesound.org/people/joedeshon/sounds/320871/) | joedeshon | CC0 |
@@ -75,34 +68,22 @@ https://creativecommons.org/licenses/by/4.0/
 | F12 | Dardo clavándose en el tablero | [Dartboard 5.aif](https://freesound.org/people/tonnonic/sounds/332201/) | tonnonic | CC BY 3.0 |
 | F13 | Banqueta arrastrada | [Chair-Stool-Wooden-Dragged-12.wav](https://freesound.org/people/DWOBoyle/sounds/147010/) | DWOBoyle | CC BY 4.0 |
 
-## Voces
-
-| # | Uso en la escena | Sonido | Autor | Licencia |
-|---|---|---|---|---|
-| V1 | Risas puntuales en una mesa | [Crowd laugh.wav](https://freesound.org/people/deleted_user_2104797/sounds/324894/) | deleted_user_2104797 | CC0 |
-| V2 | Risas de un grupo chico | [Small Crowd Laughing](https://freesound.org/people/snakebarney/sounds/138112/) | snakebarney | CC0 |
-| V3 | Festejo en el pool (bola metida) | [Crowd Cheer.wav](https://freesound.org/people/deleted_user_2104797/sounds/324892/) | deleted_user_2104797 | CC0 |
-
-(El murmullo A1/A2 también es voz: *walla*.)
-
 ---
 
 ## Créditos para poner en el juego / informe
 
 ```
 Música: Kevin MacLeod (incompetech.com) — "Rollin at 5", "Bass Walker",
-"Night on the Docks - Sax", "Sad Trio". Licensed under Creative Commons:
+"Night on the Docks - Sax". Licensed under Creative Commons:
 By Attribution 4.0 — https://creativecommons.org/licenses/by/4.0/
 
 Efectos de sonido de Freesound.org:
-- "Bar Crowd - Logans Pub - Feb 2007" by lonemonk — CC BY 4.0 — https://freesound.org/s/31487/
 - "jf Pool Ball hit and pocket.wav" by cmusounddesign — CC BY 4.0 — https://freesound.org/s/85169/
 - "Cash Register" by kiddpark — CC BY 4.0 — https://freesound.org/s/201159/
 - "Dartboard 5.aif" by tonnonic — CC BY 3.0 — https://freesound.org/s/332201/
 - "Chair-Stool-Wooden-Dragged-12.wav" by DWOBoyle — CC BY 4.0 — https://freesound.org/s/147010/
-- CC0 (dominio público): wjb_88 (828867), eloquentsleep (174648), brunoboselli (512511),
+- CC0 (dominio público): eloquentsleep (174648), brunoboselli (512511),
   Julien_Matthey (118340), portwain (261135), joedeshon (320871), AmberdeMeillon (443052),
   Za-Games (539854), BPlayers (506817), LampEight (402465), zembacraftworks (428334),
-  BeeProductive (376741), EpicWizard (325195), Glitchedtones (380274), MegaPenguin13 (118199),
-  deleted_user_2104797 (324894, 324892), snakebarney (138112).
+  BeeProductive (376741), EpicWizard (325195), Glitchedtones (380274), MegaPenguin13 (118199).
 ```
