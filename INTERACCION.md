@@ -94,12 +94,11 @@ Durante toda la noche: la puerta de la cocina se abre cuando suena; al abrirse l
 | `Doors/Door Entrance` y `Door Kitchen` | `[Etapa2] Bisagra` con `DoorSwing` (la hoja y el picaporte cuelgan de ahí) + un *vano* detrás (noche / luz de cocina) para que al abrir no se vea la pared. |
 | `Interaccion (Etapa 2)/Relampago (luz en tiempo real)` | `LightningStorm` + luz direccional que solo se enciende durante el destello. |
 | `Interaccion (Etapa 2)/Pedidos y actos` | `OrderManager`: la noche en tres actos. Pedidos, nombres de clientes, música por acto y pistas. |
-| `Audio (Bar)/…/[Etapa2] Trueno (ventana)` | Solo si hay una grabación de trueno en `Assets/Sounds`: copia la configuración de *Lluvia ventana izq.* (suena apagado por el vidrio). |
+| `Audio (Bar)/…/[Etapa2] Trueno (ventana)` | Trueno (A8, 3 tomas): copia la configuración de *Lluvia ventana izq.* (suena apagado por el vidrio). |
 | `Audio (Bar)/Foley` | `Puerta entrada`, `Abrir botella` y `Hielo` ya no suenan solos: los disparan los clientes y el participante. |
 
 **Sonido:** no se agregó ni se generó ningún sonido. La pista de la apertura usa *Botellas (heladera)* (vuelve a su lugar).
-**Trueno:** no hay grabación todavía; el relámpago es mudo hasta agregar una con licencia libre (ver `CREDITOS_AUDIO.md`)
-y volver a correr el menú.
+**Trueno:** grabación real CC0 (BlueDelta, Freesound), editada en 3 tomas `A8_trueno_0X.wav` (ver `CREDITOS_AUDIO.md`).
 
 ## Scripts nuevos (`Assets/Scripts/Interaction/`)
 

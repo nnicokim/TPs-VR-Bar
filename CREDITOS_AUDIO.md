@@ -49,6 +49,7 @@ https://creativecommons.org/licenses/by/4.0/
 | A5 | Zumbido del neón (palmera + cartel EXIT) | [JM_NOIZ_Buzz 01 - Neon Light](https://freesound.org/people/Julien_Matthey/sounds/118340/) | Julien_Matthey | CC0 |
 | A6 | Heladera de cervezas detrás de la barra | [Vending Machines - Hum 2](https://freesound.org/people/portwain/sounds/261135/) | portwain | CC0 |
 | A7 | Arcade roto ("Out of Order") | [electrical_hum_01](https://freesound.org/people/joedeshon/sounds/320871/) | joedeshon | CC0 |
+| A8 | Trueno de los relámpagos (afuera, apagado por el vidrio) — 3 tomas | [Heavy Thunder Strike - no Rain - QUADRO.wav](https://freesound.org/people/BlueDelta/sounds/446753/) | BlueDelta | CC0 |
 
 ## Foley
 
@@ -90,14 +91,10 @@ Efectos de sonido de Freesound.org:
 
 ---
 
-## Pendiente: trueno
+## Notas de edición
 
-Para el relámpago de la etapa 2 falta una grabación de trueno (no se usan sonidos sintetizados). Candidatas
-**CC0** en Freesound (hace falta iniciar sesión para bajarlas; verificar la licencia en la página, como con el resto):
+- **A8 (trueno):** el original es un PolyWAV de 4 canales (48 kHz, 24 bit, 62 s). Se mezcló a mono (promedio de los 4 canales),
+  se pasó a 44,1 kHz / 16 bit y se separaron 3 tomas que arrancan en los tres golpes del retumbo
+  (`A8_trueno_01` 0,55–20 s, `_02` 4,7–22 s, `_03` 8,2–26 s), con fundido de entrada de 12 ms, fundido de salida de 4 s
+  y pico a −1 dBFS como el resto. Sin filtros ni efectos.
 
-- "Heavy Thunder Strike - no Rain - QUADRO.wav" — BlueDelta — https://freesound.org/people/BlueDelta/sounds/446753/
-  (4 canales: Unity lo pasa a mono con *Force To Mono*).
-- "Thunder" — Fission9 — https://freesound.org/s/465314
-
-Editarla como las demás (mono, nivelada, 2–3 tomas: `A8_trueno_01.wav`, `A8_trueno_02.wav`…), ponerla en
-`Assets/Sounds/Ambiente/`, sumarla a la tabla de arriba y volver a correr **VR Bar → Armar Etapa 2**.

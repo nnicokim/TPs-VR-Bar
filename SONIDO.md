@@ -89,5 +89,5 @@ todo a 44,1 kHz y en **mono** (una fuente 3D se colapsa a un punto: el estéreo 
 - La música cambia de volumen según el acto (apertura, hora pico, cierre) con `BarSound.SetVolumeScale`.
 - Pista de la apertura: `Botellas (heladera)` suena un momento desde la botella pedida (para que el participante se dé
   vuelta) y después vuelve a su lugar. No se agregó ninguna fuente nueva.
-- Trueno: todavía no hay grabación. Cuando se agregue una en `Assets/Sounds` (con "trueno" o "thunder" en el nombre), el
-  menú de la etapa 2 crea su fuente junto a la ventana copiando la configuración de la lluvia (suena apagado por el vidrio).
+- Trueno (A8, 3 tomas): fuente `[Etapa2] Trueno (ventana)` junto a la ventana, copiada de la lluvia para heredar su Steam
+  Audio (suena apagado por el vidrio). La dispara el relámpago 0,8–3 s después del destello. Total: 21 fuentes.
