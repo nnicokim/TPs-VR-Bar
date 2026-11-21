@@ -42,12 +42,12 @@ namespace BarInteraccion
         public BarSound entranceSound;
         [Tooltip("Música del bar (sube en la hora pico, baja en el cierre).")]
         public BarSound musicSound;
-        [Tooltip("Pista sonora: tintineo que sale de la botella pedida en la apertura.")]
+        [Tooltip("Pista sonora: tintineo de botellas (la fuente existente 'Botellas (heladera)'). En la apertura suena desde la botella pedida y después vuelve a su lugar.")]
         public BarSound hintSound;
 
         [Header("Pedidos")]
         public string[] openingOrders = { "Rubia", "Whisky" };
-        public string[] rushOrders = { "Negra", "Vodka", "IPA", "Gin", "Roja", "Tequila", "Rubia", "Jäger" };
+        public string[] rushOrders = { "Negra", "Vodka", "IPA", "Ron", "Gin", "Roja", "Tequila", "Rubia", "Jäger" };
         public int rushMaxPending = 2;
         [Tooltip("Segundos entre clientes en la hora pico (mín, máx).")]
         public Vector2 rushInterval = new Vector2(6f, 12f);
@@ -66,6 +66,8 @@ namespace BarInteraccion
         readonly List<Order> orders = new List<Order>();
         readonly List<GazeInteractable> hinted = new List<GazeInteractable>();
         Coroutine hintLoop;
+        Vector3 hintHome;
+        bool hintMoved;
         int customerIndex;
         bool hintsEnabled;
 
@@ -246,6 +248,7 @@ namespace BarInteraccion
 
         IEnumerator HintSound(BottleSource bottle)
         {
+            if (!hintMoved) { hintHome = hintSound.transform.position; hintMoved = true; }
             yield return new WaitForSeconds(1.5f);
             while (true)
             {
@@ -259,6 +262,7 @@ namespace BarInteraccion
             foreach (var h in hinted) if (h != null) h.Attract = false;
             hinted.Clear();
             if (hintLoop != null) { StopCoroutine(hintLoop); hintLoop = null; }
+            if (hintMoved && hintSound != null) { hintSound.transform.position = hintHome; hintMoved = false; } // la fuente vuelve a su lugar
         }
     }
 }

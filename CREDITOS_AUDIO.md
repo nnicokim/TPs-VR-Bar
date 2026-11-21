@@ -92,12 +92,12 @@ Efectos de sonido de Freesound.org:
 
 ## Pendiente: trueno
 
-Para `Trueno (ventana)` (relámpagos de la etapa 2 de interacción) falta una grabación. Candidatas en Freesound
-(verificar la licencia en la página de cada una antes de usarla, como con el resto):
+Para el relámpago de la etapa 2 falta una grabación de trueno (no se usan sonidos sintetizados). Candidatas
+**CC0** en Freesound (hace falta iniciar sesión para bajarlas; verificar la licencia en la página, como con el resto):
 
-- "Thunder, Very Close, Rain, A.wav" — InspectorJ — https://freesound.org/people/InspectorJ/sounds/360328/
-- "thunder rain city" — klankbeeld (pide crédito) — https://freesound.org/people/klankbeeld/sounds/711741/
+- "Heavy Thunder Strike - no Rain - QUADRO.wav" — BlueDelta — https://freesound.org/people/BlueDelta/sounds/446753/
+  (4 canales: Unity lo pasa a mono con *Force To Mono*).
 - "Thunder" — Fission9 — https://freesound.org/s/465314
 
-Editarla igual que las demás (mono, nivelada, 2–3 tomas como `A8_trueno_01.wav`…) y arrastrarla a `clips` del BarSound.
-
+Editarla como las demás (mono, nivelada, 2–3 tomas: `A8_trueno_01.wav`, `A8_trueno_02.wav`…), ponerla en
+`Assets/Sounds/Ambiente/`, sumarla a la tabla de arriba y volver a correr **VR Bar → Armar Etapa 2**.

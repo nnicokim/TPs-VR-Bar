@@ -27,6 +27,7 @@ namespace BarInteraccion.EditorTools
             ("Beefeater", "Gin", new Color(0.85f, 0.95f, 0.97f)),
             ("Jagermeister", "Jäger", new Color(0.22f, 0.1f, 0.04f)),
             ("Olmeca", "Tequila", new Color(0.97f, 0.88f, 0.55f)),
+            ("Havana_Club", "Ron", new Color(0.72f, 0.44f, 0.16f)),
         };
 
         [MenuItem("VR Bar/Armar Etapa 2 (pedidos, tragos, puertas y tormenta)")]
@@ -85,18 +86,31 @@ namespace BarInteraccion.EditorTools
                 if (s != null) { Undo.RecordObject(s, "Armar Etapa 2"); s.automatic = false; }
             log.AppendLine("• 'Puerta entrada', 'Abrir botella' y 'Hielo' ya no suenan solos: los dispara la interacción.");
 
-            // Sonidos nuevos copiando fuentes existentes (heredan su configuración de Steam Audio).
-            var hint = Duplicate(botellas, "Pista (botella pedida)", root.transform);
-            var thunder = Duplicate(rain.FirstOrDefault(), "Trueno (ventana)", root.transform);
-            if (thunder != null)
+            // Sin fuentes nuevas: la pista usa 'Botellas (heladera)' (vuelve a su lugar al terminar).
+            var hint = botellas;
+            // Trueno: solo si agregaron una grabación (nombre con "trueno" o "thunder" en Assets/Sounds).
+            var thunderClips = AssetDatabase.FindAssets("t:AudioClip", new[] { "Assets/Sounds" })
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Where(p => { var n = System.IO.Path.GetFileName(p).ToLowerInvariant(); return n.Contains("trueno") || n.Contains("thunder"); })
+                .Select(p => AssetDatabase.LoadAssetAtPath<AudioClip>(p)).Where(c => c != null).ToArray();
+            BarSound thunder = null;
+            var rainSource = rain.FirstOrDefault();
+            if (thunderClips.Length > 0 && rainSource != null)
             {
-                thunder.clips = new AudioClip[0];
+                // Fuente del trueno junto a la ventana: copia la configuración de la lluvia (suena apagado por el vidrio).
+                var go = Object.Instantiate(rainSource.gameObject, rainSource.transform.parent);
+                Undo.RegisterCreatedObjectUndo(go, "Armar Etapa 2");
+                go.name = $"{Prefix}Trueno (ventana)";
+                go.transform.position = rainSource.transform.position;
+                thunder = go.GetComponent<BarSound>();
+                thunder.clips = thunderClips;
                 thunder.loop = false;
                 thunder.automatic = false;
-                var src = thunder.GetComponent<AudioSource>();
+                var src = go.GetComponent<AudioSource>();
                 src.minDistance = 3f; src.maxDistance = 40f;
-                log.AppendLine("• 'Trueno (ventana)': copia de la lluvia (suena apagado por el vidrio). <color=orange>No tiene clips: cargale una grabación de trueno CC0.</color>");
+                log.AppendLine($"• Trueno: {thunderClips.Length} grabación(es) encontrada(s) ({string.Join(", ", thunderClips.Select(c => c.name))}).");
             }
+            else log.AppendLine("<color=orange>• No hay grabación de trueno en Assets/Sounds (nombre con \"trueno\" o \"thunder\"): el relámpago queda mudo. Agregala y volvé a correr el menú.</color>");
 
             // ---------- Geometría de referencia ----------
             Vector3 front = beer.serveDirection; front.y = 0f; front = front.sqrMagnitude > 0f ? front.normalized : Vector3.right;
@@ -160,7 +174,20 @@ namespace BarInteraccion.EditorTools
                     col.center = mf.sharedMesh.bounds.center;
                     col.size = mf.sharedMesh.bounds.size * 1.1f;
                 }
+                // Cartel en el borde del estante, debajo de la botella, de frente al barman.
+                Vector3 tagPos = bottle.position + front * 0.12f + Vector3.down * 0.015f;
+                Physics.SyncTransforms();
+                if (Physics.Raycast(bottle.position + Vector3.up * 0.03f, Vector3.down, out RaycastHit shelfHit, 0.2f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                {
+                    Bounds sb = shelfHit.collider.bounds;
+                    float edge = Vector3.Dot(sb.center, front) + Mathf.Abs(Vector3.Dot(sb.extents, front));
+                    Vector3 onEdge = bottle.position + front * (edge - Vector3.Dot(bottle.position, front) + 0.004f);
+                    tagPos = new Vector3(onEdge.x, sb.center.y - 0.006f, onEdge.z);
+                }
                 var src = Undo.AddComponent<BottleSource>(bottle.gameObject);
+                src.tagPosition = tagPos;
+                src.tagFacing = front;
+                src.tagMaterial = boardMat;
                 src.station = shot;
                 src.drinkName = drink;
                 src.liquidColor = color;
@@ -272,18 +299,6 @@ namespace BarInteraccion.EditorTools
             log.AppendLine($"• Puerta '{doorName}': bisagra en {Fmt(hinge)}, abre {swing.openAngle:0}° hacia el salón con '{(sound != null ? sound.gameObject.name : "—")}'.");
         }
 
-        static BarSound Duplicate(BarSound source, string name, Transform parent)
-        {
-            if (source == null) return null;
-            var go = Object.Instantiate(source.gameObject, parent);
-            Undo.RegisterCreatedObjectUndo(go, "Armar Etapa 2");
-            go.name = name;
-            go.transform.position = source.transform.position;
-            var s = go.GetComponent<BarSound>();
-            s.automatic = false;
-            return s;
-        }
-
         static void Cleanup(StringBuilder log)
         {
             int n = 0;
@@ -293,6 +308,12 @@ namespace BarInteraccion.EditorTools
                 foreach (var child in pivot.Cast<Transform>().ToList())
                     Undo.SetTransformParent(child, pivot.parent, "Armar Etapa 2");
                 Undo.DestroyObjectImmediate(pivot.gameObject);
+                n++;
+            }
+            foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None).Where(t => t != null && t.name.StartsWith(Prefix)).ToList())
+            {
+                if (t == null) continue;
+                Undo.DestroyObjectImmediate(t.gameObject);
                 n++;
             }
             foreach (var b in Object.FindObjectsByType<BottleSource>(FindObjectsInactive.Include, FindObjectsSortMode.None))

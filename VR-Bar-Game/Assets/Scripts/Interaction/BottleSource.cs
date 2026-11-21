@@ -1,4 +1,6 @@
+using TMPro;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace BarInteraccion
 {
@@ -6,6 +8,8 @@ namespace BarInteraccion
     /// Una botella del estante que se puede usar. Al elegirla, la ShotStation la levanta, la lleva
     /// volando sobre el vaso, sirve y la devuelve a su lugar. Recuerda su pose original.
     /// Como las botellas están detrás del barman, el pedido obliga a darse vuelta: usa el espacio de la RV.
+    /// Cada botella usable tiene un cartelito en el borde del estante (WHISKY, GIN…), siempre visible:
+    /// distingue las que se usan de las decorativas y se puede mirar para elegirla.
     /// </summary>
     public class BottleSource : GazeInteractable
     {
@@ -14,6 +18,17 @@ namespace BarInteraccion
         [Header("Bebida")]
         public string drinkName = "Whisky";
         public Color liquidColor = new Color(0.75f, 0.42f, 0.12f, 1f);
+
+        [Header("Cartel del estante")]
+        public bool showTag = true;
+        [Tooltip("Texto del cartel. Vacío: el nombre de la bebida en mayúsculas.")]
+        public string tagText = "";
+        [Tooltip("Centro del cartel (mundo). Lo calcula el armado: borde del estante, debajo de la botella.")]
+        public Vector3 tagPosition;
+        [Tooltip("Hacia dónde mira el frente del cartel (hacia el barman).")]
+        public Vector3 tagFacing = Vector3.right;
+        public Material tagMaterial;
+        public Vector2 tagSize = new Vector2(0.095f, 0.04f);
 
         public Vector3 RestPosition { get; private set; }
         public Quaternion RestRotation { get; private set; }
@@ -35,6 +50,47 @@ namespace BarInteraccion
             Quaternion inv = Quaternion.Inverse(RestRotation);
             TipOffset = inv * (new Vector3(b.center.x, b.max.y, b.center.z) - RestPosition);
             CenterOffset = inv * (b.center - RestPosition);
+            if (showTag) BuildTag();
+        }
+
+        void BuildTag()
+        {
+            Vector3 facing = tagFacing; facing.y = 0f;
+            if (facing.sqrMagnitude < 1e-6f) facing = Vector3.right;
+            facing.Normalize();
+            Vector3 pos = tagPosition != Vector3.zero ? tagPosition : RestPosition + facing * 0.12f + Vector3.down * 0.02f;
+
+            var root = new GameObject($"Cartel {drinkName}");
+            root.transform.SetParent(transform.parent, false); // no cuelga de la botella: se queda en el estante
+            // El frente del cartel (donde está el texto) mira hacia "facing"; su +Z apunta al estante.
+            root.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(-facing, Vector3.up));
+
+            var card = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            card.name = "Tarjeta";
+            card.transform.SetParent(root.transform, false);
+            card.transform.localScale = new Vector3(tagSize.x, tagSize.y, 0.004f);
+            var r = card.GetComponent<Renderer>();
+            if (tagMaterial != null) r.sharedMaterial = tagMaterial;
+            r.shadowCastingMode = ShadowCastingMode.Off;
+            var col = card.GetComponent<BoxCollider>();
+            if (col != null) col.isTrigger = true;
+            card.AddComponent<GazeProxy>().target = this;
+
+            var textGo = new GameObject("Texto");
+            textGo.transform.SetParent(root.transform, false);
+            textGo.transform.localPosition = new Vector3(0f, 0f, -0.0025f); // apenas delante de la tarjeta
+            var t = textGo.AddComponent<TextMeshPro>();
+            t.text = string.IsNullOrEmpty(tagText) ? drinkName.ToUpperInvariant() : tagText;
+            t.fontSize = 0.2f; // ~2 cm de alto (10 pt ≈ 1 m)
+            t.fontStyle = FontStyles.Bold;
+            t.alignment = TextAlignmentOptions.Center;
+            t.color = new Color(0.95f, 0.93f, 0.85f, 1f);
+            t.rectTransform.sizeDelta = new Vector2(tagSize.x - 0.008f, tagSize.y);
+            t.enableAutoSizing = true;
+            t.fontSizeMin = 0.08f;
+            t.fontSizeMax = 0.2f;
+            var tr = textGo.GetComponent<MeshRenderer>();
+            if (tr != null) tr.shadowCastingMode = ShadowCastingMode.Off;
         }
 
         protected override bool IsAvailable() => station != null && station.CanPour;

@@ -76,7 +76,7 @@ Arrancar en la entrada: el aro **Barra** late. Al llegar a la barra:
 
 1. **Apertura.** Suena la campanita, se abre la puerta de entrada y la pizarra (colgada sobre la barra) se balancea con
    el primer pedido: una cerveza. La canilla pedida late. Después, un **whisky**: la botella está **detrás** (en el estante);
-   late y tintinea desde ahí para que el participante se dé vuelta. Se mira la botella → vuela al vaso con hielo, sirve y vuelve.
+   late y tintinea desde ahí para que el participante se dé vuelta, y su cartel dice **WHISKY**. Se mira la botella (o su cartel) → vuela al vaso con hielo, sirve y vuelve.
    Se mira el vaso → se entrega.
 2. **Hora pico.** Sube la música; los clientes entran más seguido; hasta dos pedidos a la vez; sin pistas.
 3. **Cierre.** Un relámpago marca el cambio, baja la música, los últimos se van y la pizarra muestra cómo fue la noche.
@@ -90,22 +90,24 @@ Durante toda la noche: la puerta de la cocina se abre cuando suena; al abrirse l
 |---|---|
 | `Interaccion (Etapa 2)/Pizarra de pedidos` | `OrderBoard`: pizarra colgada de cadenas, de frente al barman. Se arma al dar Play. |
 | `Interaccion (Etapa 2)/Estacion de tragos` | `ShotStation` + `Apoyo vaso` a la izquierda de las canillas. El vaso (con hielo) se arma por código. |
-| `Bar/Shelf Bottles/` Chivas, Absolut Vodka, Beefeater, Jagermeister, Olmeca | `BottleSource` (Whisky, Vodka, Gin, Jäger, Tequila): las del estante de abajo, justo detrás del barman. Sin *Batching Static*. |
+| `Bar/Shelf Bottles/` Chivas, Absolut Vodka, Beefeater, Jagermeister, Olmeca, Havana_Club | `BottleSource` (Whisky, Vodka, Gin, Jäger, Tequila, Ron): las del estante de abajo, justo detrás del barman. Sin *Batching Static*. Cada una tiene un **cartel** en el borde del estante (WHISKY, GIN…), siempre visible, que distingue las usables de las decorativas y también se puede mirar para elegirla. |
 | `Doors/Door Entrance` y `Door Kitchen` | `[Etapa2] Bisagra` con `DoorSwing` (la hoja y el picaporte cuelgan de ahí) + un *vano* detrás (noche / luz de cocina) para que al abrir no se vea la pared. |
 | `Interaccion (Etapa 2)/Relampago (luz en tiempo real)` | `LightningStorm` + luz direccional que solo se enciende durante el destello. |
 | `Interaccion (Etapa 2)/Pedidos y actos` | `OrderManager`: la noche en tres actos. Pedidos, nombres de clientes, música por acto y pistas. |
-| `Interaccion (Etapa 2)/Trueno (ventana)` y `Pista (botella pedida)` | Copias de *Lluvia ventana izq.* y *Botellas (heladera)* (heredan su Steam Audio). |
+| `Audio (Bar)/…/[Etapa2] Trueno (ventana)` | Solo si hay una grabación de trueno en `Assets/Sounds`: copia la configuración de *Lluvia ventana izq.* (suena apagado por el vidrio). |
 | `Audio (Bar)/Foley` | `Puerta entrada`, `Abrir botella` y `Hielo` ya no suenan solos: los disparan los clientes y el participante. |
 
-**Trueno:** no hay grabación de trueno en el proyecto (y no usamos sonidos sintetizados). `Trueno (ventana)` quedó sin
-clips: el relámpago funciona mudo hasta que se le cargue una grabación con licencia libre (ver `CREDITOS_AUDIO.md`).
+**Sonido:** no se agregó ni se generó ningún sonido. La pista de la apertura usa *Botellas (heladera)* (vuelve a su lugar).
+**Trueno:** no hay grabación todavía; el relámpago es mudo hasta agregar una con licencia libre (ver `CREDITOS_AUDIO.md`)
+y volver a correr el menú.
 
 ## Scripts nuevos (`Assets/Scripts/Interaction/`)
 
 | Script | Qué hace |
 |---|---|
 | `IDrinkStation` | Contrato común de las estaciones (cerveza y tragos): preparar, entregar, eventos `DrinkStarted` / `DrinkServed`. |
-| `ShotStation`, `BottleSource` | Botella que se levanta, vuela en arco (Bézier), se inclina y sirve; vaso torneado por código con hielo. |
+| `ShotStation`, `BottleSource` | Botella que se levanta, vuela en arco (Bézier), se inclina y sirve; vaso torneado por código con hielo. Cartel del estante por botella. |
+| `GazeProxy` | Reenvía la mirada a otro objeto (mirar el cartel = mirar la botella). |
 | `OrderManager`, `OrderBoard` | Los actos y los pedidos; la pizarra (texto de tiza, tachado al servir, nota de error, balanceo). |
 | `DoorSwing` | Abre la puerta cuando suena su `BarSound` (evento `Played`) y sube la lluvia mientras está abierta. |
 | `LightningStorm` | Destellos (2–3 pulsos) y trueno demorado 0,8–3 s. |
@@ -117,7 +119,7 @@ clips: el relámpago funciona mudo hasta que se le cargue una grabación con lic
 |---|---|
 | **Significado** | Clientes con nombre que piden algo concreto; el participante es quien los atiende. La noche tiene un arco (abrir, llenarse, cerrar) y un cierre con el resumen de *su* noche. Lo que antes era fuera de campo (la puerta, la gente) ahora tiene consecuencias. |
 | **Patrones** | Interfaz diegética (pizarra colgada, nada de HUD). Manipulación indirecta con animación (la botella "obedece"). El espacio 360° como parte del desafío: las botellas están detrás. Selección por mirada con restricciones (una preparación por estación). |
-| **Ofrecimientos** | Pistas solo al principio: lo pedido late y la botella **suena desde su lugar** (el sonido espacial guía la mirada). La pizarra se balancea cuando llega algo. El vaso lleno late hasta que se entrega. |
+| **Ofrecimientos** | Carteles en el estante (WHISKY, GIN…) que marcan qué botellas se usan. Pistas solo al principio: lo pedido late y la botella **suena desde su lugar** (el sonido espacial guía la mirada). La pizarra se balancea cuando llega algo. El vaso lleno late hasta que se entrega. |
 | **Flow** | Desafío creciente con la habilidad: apertura guiada de a un pedido → hora pico sin pistas y con dos pedidos a la vez → descompresión en el cierre. Sin tiempo límite ni castigo (el error se anota y se corrige), feedback inmediato en cada paso, música que acompaña la intensidad. |
 | **Animación** | Botella en vuelo e inclinación, puertas con rebote al cerrarse, pizarra con balanceo amortiguado, relámpagos, vasos que entran y se van. |
 

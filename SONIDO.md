@@ -87,6 +87,7 @@ todo a 44,1 kHz y en **mono** (una fuente 3D se colapsa a un punto: el estéreo 
   los dispara lo que pasa en la escena (el participante sirve, un cliente entra). Se mueven a donde ocurre la acción.
 - Las puertas se abren cuando suena su sonido (`BarSound.Played`) y, con la de entrada abierta, la lluvia sube.
 - La música cambia de volumen según el acto (apertura, hora pico, cierre) con `BarSound.SetVolumeScale`.
-- Dos fuentes nuevas, copiadas de otras para heredar su Steam Audio: `Pista (botella pedida)` (tintineo de botellas que
-  sale de la botella que se pidió) y `Trueno (ventana)` (apagado por el vidrio, todavía sin clips). Total: 21 fuentes.
-
+- Pista de la apertura: `Botellas (heladera)` suena un momento desde la botella pedida (para que el participante se dé
+  vuelta) y después vuelve a su lugar. No se agregó ninguna fuente nueva.
+- Trueno: todavía no hay grabación. Cuando se agregue una en `Assets/Sounds` (con "trueno" o "thunder" en el nombre), el
+  menú de la etapa 2 crea su fuente junto a la ventana copiando la configuración de la lluvia (suena apagado por el vidrio).
