@@ -134,7 +134,7 @@ namespace BarInteraccion
 
         // ---------- Etiqueta ----------
 
-        protected Vector3 LabelPosition => transform.position + labelOffset;
+        protected virtual Vector3 LabelPosition => transform.position + labelOffset;
 
         void UpdateLabel()
         {
