@@ -583,10 +583,10 @@ namespace BarInteraccion.EditorTools
 
         static IEnumerable<GameObject> FindInstances(string assetPath)
         {
-            return Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.InstanceID)
+            return Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
                 .Select(t => t.gameObject)
                 .Where(g => PrefabUtility.IsAnyPrefabInstanceRoot(g)
-                            && PrefabUtility.GetPrefabAssetPathOfNearestPrefabInstanceRoot(g) == assetPath)
+                            && PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(g) == assetPath)
                 .ToList();
         }
 
