@@ -61,7 +61,7 @@ namespace BarInteraccion
         {
             float target = 0f;
             if (IsGazed && CanInteract) target = 1f;
-            else if (Attract) target = Mathf.Lerp(0.2f, 0.65f, 0.5f + 0.5f * Mathf.Sin(Time.time * 4f));
+            else if (Attract && CanInteract) target = Mathf.Lerp(0.2f, 0.65f, 0.5f + 0.5f * Mathf.Sin(Time.time * 4f));
             HighlightAmount = Mathf.MoveTowards(HighlightAmount, target, Time.deltaTime * 6f);
             ApplyHighlight(HighlightAmount);
             UpdateLabel();

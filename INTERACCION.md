@@ -4,18 +4,12 @@
 Los clientes siguen fuera de campo (se oyen, no se ven, como en `SONIDO.md`). En esta etapa queda armada la base de la
 interacción para Cardboard (mirada + un toque) y la primera acción completa: **servir una cerveza**.
 
-## Cómo armarlo en la escena (una sola vez)
+## Estado
 
-1. Abrir `SampleScene` y esperar a que Unity compile los scripts nuevos.
-2. Menú **VR Bar → Armar Etapa 1 (mirada, teletransporte y canilla)**. La Consola muestra un resumen de lo que hizo
-   (y avisos en naranja si algo no lo encontró o si un punto de teletransporte se superpone con un mueble).
-3. **Guardar la escena** (Ctrl+S).
-4. **Recomendado:** *Window → Rendering → Lighting → Generate Lighting*. Las luces del bar son *Baked* y lo que se mueve
-   (manijas, jarra) no está en el lightmap: el armado agrega light probes en la barra, pero necesitan un horneado para tener luz.
+La etapa 1 ya está armada y guardada en `SampleScene` (el menú que la armaba se borró: queda en el historial de git).
+La etapa 2 se arma con un menú temporal (ver más abajo) que también se borra una vez guardada la escena.
 
-El menú se puede correr de nuevo: borra lo que armó antes y lo rearma. Todo queda en un solo *Deshacer* (Ctrl+Z).
-
-## Cómo probar
+## Cómo probar (etapa 1)
 
 - **En el Editor:** Play. *Clic derecho + mouse* para mirar (`EditorMouseLook`), *clic izquierdo* o *Espacio* para elegir,
   o simplemente mirar fijo ~1 s.
@@ -24,9 +18,10 @@ El menú se puede correr de nuevo: borra lo que armó antes y lo rearma. Todo qu
 Recorrido de prueba: desde la entrada, mirar el aro **Barra** en el piso → aparece detrás de la barra mirando las canillas →
 mirar una manija (se contornea y dice *Rubia*, *Roja*, *Negra* o *IPA*) → la jarra entra, la manija baja, sale el chorro,
 la jarra se llena con espuma, la manija vuelve → la jarra "brilla" → mirarla (*Servir*) → se desliza hacia los clientes y
-suena la caja. Probar también los aros **Pool**, **Dardos**, **Arcade**, **Ventana** y **Entrada**.
+suena la caja. Probar también los aros **Pool**, **Dardos**, **Arcade**, **Ventana** y **Entrada**. Cada aro tiene arriba un indicador
+flotante (a 1,55 m) que se ve por encima del mostrador y también se puede mirar para ir.
 
-## Qué agrega el menú a la escena
+## Qué tiene la escena (etapa 1)
 
 | Dónde | Qué |
 |---|---|
@@ -50,7 +45,6 @@ suena la caja. Probar también los aros **Pool**, **Dardos**, **Arcade**, **Vent
 | `ScreenFader`, `GazeTeleporter`, `TeleportPoint` | Teletransporte con fundido a negro, manteniendo la altura de los ojos y girando hacia donde apunta el punto. El punto donde uno está se oculta. |
 | `BeerTap`, `PourStation`, `ServeMug` | La canilla, la secuencia servir → entregar y la jarra. `PourStation.BeerServed` queda listo para los pedidos de la etapa 2. |
 | `Shaders/GazeOutline.shader` | Contorno *inverted hull* para URP. |
-| `Editor/SetupEtapa1.cs` | El menú que arma todo. |
 | `Audio/BarSound.cs` (cambio) | Nuevo `automatic`, `PlayOnce()`, `PlayOnceAt(pos)` y `FadeOut(s)`. Los sonidos existentes no cambian. |
 
 ## Qué cubre de la consigna (esta etapa)
@@ -63,8 +57,71 @@ suena la caja. Probar también los aros **Pool**, **Dardos**, **Arcade**, **Vent
 | **Flow** | Meta clara (llenar → servir), feedback inmediato (palanca, chorro, nivel, espuma, sonido, caja), cada paso dura poco y encadena con el siguiente, sin pantallas que saquen de la escena. |
 | **Animación** | Manija con *ease-out* al tirar y rebote al soltar, jarra que entra y se va deslizando, chorro que crece y se corta desde arriba, llenado con espuma que se asienta, aros que respiran, retículo y fundidos. |
 
-## Próximas etapas
+---
 
-2. Pedidos (comandera + pizarra) y los tres actos (apertura, hora pico y cierre), botellas del estante, puertas animadas
-   en sincronía con su sonido y relámpago con trueno.
-3. Juegos (dardos y pool), arcade "secreto" y la secuencia de cierre (neones, cortinas y luces) con Timeline.
+# Etapa 2: la noche (pedidos y actos), tragos, puertas y tormenta
+
+## Cómo armarla (una sola vez)
+
+1. Abrir `SampleScene` y esperar a que compile.
+2. Menú **VR Bar → Armar Etapa 2 (pedidos, tragos, puertas y tormenta)**. La Consola muestra un resumen
+   (en naranja, lo que no encontró).
+3. Guardar la escena (Ctrl+S). No hace falta rehornear la iluminación.
+4. Probar, commitear la escena y **borrar** `Assets/Scripts/Editor/SetupEtapa2.cs` (correrlo de nuevo rehace los objetos
+   y pierde los ajustes manuales).
+
+## Cómo probar
+
+Arrancar en la entrada: el aro **Barra** late. Al llegar a la barra:
+
+1. **Apertura.** Suena la campanita, se abre la puerta de entrada y la pizarra (colgada sobre la barra) se balancea con
+   el primer pedido: una cerveza. La canilla pedida late. Después, un **whisky**: la botella está **detrás** (en el estante);
+   late y tintinea desde ahí para que el participante se dé vuelta. Se mira la botella → vuela al vaso con hielo, sirve y vuelve.
+   Se mira el vaso → se entrega.
+2. **Hora pico.** Sube la música; los clientes entran más seguido; hasta dos pedidos a la vez; sin pistas.
+3. **Cierre.** Un relámpago marca el cambio, baja la música, los últimos se van y la pizarra muestra cómo fue la noche.
+
+Durante toda la noche: la puerta de la cocina se abre cuando suena; al abrirse la de entrada sube la lluvia; cada
+25–55 s un relámpago ilumina el salón. Servir algo que nadie pidió se anota como error en la pizarra (sin castigo).
+
+## Qué agrega a la escena
+
+| Dónde | Qué |
+|---|---|
+| `Interaccion (Etapa 2)/Pizarra de pedidos` | `OrderBoard`: pizarra colgada de cadenas, de frente al barman. Se arma al dar Play. |
+| `Interaccion (Etapa 2)/Estacion de tragos` | `ShotStation` + `Apoyo vaso` a la izquierda de las canillas. El vaso (con hielo) se arma por código. |
+| `Bar/Shelf Bottles/` Chivas, Absolut Vodka, Beefeater, Jagermeister, Olmeca | `BottleSource` (Whisky, Vodka, Gin, Jäger, Tequila): las del estante de abajo, justo detrás del barman. Sin *Batching Static*. |
+| `Doors/Door Entrance` y `Door Kitchen` | `[Etapa2] Bisagra` con `DoorSwing` (la hoja y el picaporte cuelgan de ahí) + un *vano* detrás (noche / luz de cocina) para que al abrir no se vea la pared. |
+| `Interaccion (Etapa 2)/Relampago (luz en tiempo real)` | `LightningStorm` + luz direccional que solo se enciende durante el destello. |
+| `Interaccion (Etapa 2)/Pedidos y actos` | `OrderManager`: la noche en tres actos. Pedidos, nombres de clientes, música por acto y pistas. |
+| `Interaccion (Etapa 2)/Trueno (ventana)` y `Pista (botella pedida)` | Copias de *Lluvia ventana izq.* y *Botellas (heladera)* (heredan su Steam Audio). |
+| `Audio (Bar)/Foley` | `Puerta entrada`, `Abrir botella` y `Hielo` ya no suenan solos: los disparan los clientes y el participante. |
+
+**Trueno:** no hay grabación de trueno en el proyecto (y no usamos sonidos sintetizados). `Trueno (ventana)` quedó sin
+clips: el relámpago funciona mudo hasta que se le cargue una grabación con licencia libre (ver `CREDITOS_AUDIO.md`).
+
+## Scripts nuevos (`Assets/Scripts/Interaction/`)
+
+| Script | Qué hace |
+|---|---|
+| `IDrinkStation` | Contrato común de las estaciones (cerveza y tragos): preparar, entregar, eventos `DrinkStarted` / `DrinkServed`. |
+| `ShotStation`, `BottleSource` | Botella que se levanta, vuela en arco (Bézier), se inclina y sirve; vaso torneado por código con hielo. |
+| `OrderManager`, `OrderBoard` | Los actos y los pedidos; la pizarra (texto de tiza, tachado al servir, nota de error, balanceo). |
+| `DoorSwing` | Abre la puerta cuando suena su `BarSound` (evento `Played`) y sube la lluvia mientras está abierta. |
+| `LightningStorm` | Destellos (2–3 pulsos) y trueno demorado 0,8–3 s. |
+| `BarSound` (cambios) | Evento `Played`, `SetVolumeScale` (música por acto, lluvia con la puerta) y `ConfigureDefaults`. |
+
+## Qué cubre de la consigna (etapa 2)
+
+| Eje | Dónde está |
+|---|---|
+| **Significado** | Clientes con nombre que piden algo concreto; el participante es quien los atiende. La noche tiene un arco (abrir, llenarse, cerrar) y un cierre con el resumen de *su* noche. Lo que antes era fuera de campo (la puerta, la gente) ahora tiene consecuencias. |
+| **Patrones** | Interfaz diegética (pizarra colgada, nada de HUD). Manipulación indirecta con animación (la botella "obedece"). El espacio 360° como parte del desafío: las botellas están detrás. Selección por mirada con restricciones (una preparación por estación). |
+| **Ofrecimientos** | Pistas solo al principio: lo pedido late y la botella **suena desde su lugar** (el sonido espacial guía la mirada). La pizarra se balancea cuando llega algo. El vaso lleno late hasta que se entrega. |
+| **Flow** | Desafío creciente con la habilidad: apertura guiada de a un pedido → hora pico sin pistas y con dos pedidos a la vez → descompresión en el cierre. Sin tiempo límite ni castigo (el error se anota y se corrige), feedback inmediato en cada paso, música que acompaña la intensidad. |
+| **Animación** | Botella en vuelo e inclinación, puertas con rebote al cerrarse, pizarra con balanceo amortiguado, relámpagos, vasos que entran y se van. |
+
+## Próxima etapa
+
+3. Juegos (dardos y pool), arcade "secreto", el pedido opcional del habitué ("¿una más?") y la secuencia de cierre
+   (neones, cortinas y luces) con Timeline.

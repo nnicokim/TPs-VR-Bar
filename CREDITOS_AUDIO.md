@@ -87,3 +87,17 @@ Efectos de sonido de Freesound.org:
   Za-Games (539854), BPlayers (506817), LampEight (402465), zembacraftworks (428334),
   BeeProductive (376741), EpicWizard (325195), Glitchedtones (380274), MegaPenguin13 (118199).
 ```
+
+---
+
+## Pendiente: trueno
+
+Para `Trueno (ventana)` (relámpagos de la etapa 2 de interacción) falta una grabación. Candidatas en Freesound
+(verificar la licencia en la página de cada una antes de usarla, como con el resto):
+
+- "Thunder, Very Close, Rain, A.wav" — InspectorJ — https://freesound.org/people/InspectorJ/sounds/360328/
+- "thunder rain city" — klankbeeld (pide crédito) — https://freesound.org/people/klankbeeld/sounds/711741/
+- "Thunder" — Fission9 — https://freesound.org/s/465314
+
+Editarla igual que las demás (mono, nivelada, 2–3 tomas como `A8_trueno_01.wav`…) y arrastrarla a `clips` del BarSound.
+

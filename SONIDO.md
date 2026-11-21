@@ -80,3 +80,13 @@ todo a 44,1 kHz y en **mono** (una fuente 3D se colapsa a un punto: el estéreo 
 - `VR-Bar-Game/Assets/Scripts/Audio/` — `BarSound` y `EditorMouseLook`.
 - `VR-Bar-Game/Assets/Plugins/SteamAudio/` — plugin Steam Audio 4.8.1 (configuración en `Resources/SteamAudioSettings.asset`).
 - `Audio_Originales/` (no se sube a git) — descargas originales; se pueden volver a bajar con los links de `CREDITOS_AUDIO.md`.
+
+## Cambios por la interacción (ver `INTERACCION.md`)
+
+- `Canilla de cerveza`, `Puerta entrada`, `Abrir botella` y `Hielo` tienen `automatic = false`: ya no suenan solos,
+  los dispara lo que pasa en la escena (el participante sirve, un cliente entra). Se mueven a donde ocurre la acción.
+- Las puertas se abren cuando suena su sonido (`BarSound.Played`) y, con la de entrada abierta, la lluvia sube.
+- La música cambia de volumen según el acto (apertura, hora pico, cierre) con `BarSound.SetVolumeScale`.
+- Dos fuentes nuevas, copiadas de otras para heredar su Steam Audio: `Pista (botella pedida)` (tintineo de botellas que
+  sale de la botella que se pidió) y `Trueno (ventana)` (apagado por el vidrio, todavía sin clips). Total: 21 fuentes.
+

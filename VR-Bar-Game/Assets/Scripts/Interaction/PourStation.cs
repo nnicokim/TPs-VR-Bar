@@ -16,7 +16,7 @@ namespace BarInteraccion
     /// Entregando: la jarra se desliza hacia los clientes, suena la caja y desaparece.
     /// El evento BeerServed queda listo para el sistema de pedidos de la etapa 2.
     /// </summary>
-    public class PourStation : MonoBehaviour
+    public class PourStation : MonoBehaviour, IDrinkStation
     {
         public enum Phase { Idle, Pouring, Full, Serving }
 
@@ -51,9 +51,15 @@ namespace BarInteraccion
         public bool CanPour => State == Phase.Idle && mugPrefab != null;
         public int Served { get; private set; }
         public string CurrentBeer { get; private set; }
+        public string CurrentDrink => CurrentBeer;
 
         /// <summary>Se dispara al entregar una cerveza (nombre de la cerveza).</summary>
         public event Action<string> BeerServed;
+
+        public bool IsReadyToServe => State == Phase.Full;
+        public bool IsBusy => State == Phase.Pouring || State == Phase.Serving;
+        public event Action<string> DrinkStarted;
+        public event Action<string> DrinkServed;
 
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         static readonly int ColorId = Shader.PropertyToID("_Color");
@@ -104,6 +110,7 @@ namespace BarInteraccion
         {
             State = Phase.Pouring;
             CurrentBeer = tap.beerName;
+            DrinkStarted?.Invoke(CurrentBeer);
             EnsureMug();
             SetBeerColor(tap.beerColor);
             liquidFrac = 0f; foamFrac = 0f; UpdateLevels();
@@ -173,6 +180,7 @@ namespace BarInteraccion
             Served++;
             State = Phase.Idle;
             BeerServed?.Invoke(CurrentBeer);
+            DrinkServed?.Invoke(CurrentBeer);
         }
 
         // ---------- Jarra ----------
