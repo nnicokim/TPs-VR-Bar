@@ -6,8 +6,9 @@ interacción para Cardboard (mirada + un toque) y la primera acción completa: *
 
 ## Estado
 
-Las etapas 1 y 2 ya están armadas y guardadas en `SampleScene` (los menús que las armaban se borraron: quedan en el
-historial de git). La etapa 3 se arma con un menú temporal (ver al final) que también se borra una vez guardada la escena.
+Las etapas 1, 2 y 3 están armadas y guardadas en `SampleScene`: alcanza con abrir la escena y dar Play.
+Cada etapa se armó con un menú temporal de Editor (*VR Bar → Armar Etapa N*) que se corrió una vez y se borró;
+quedan en el historial de git por si hiciera falta rearmar algo.
 
 ## Cómo probar (etapa 1)
 
@@ -60,14 +61,6 @@ flotante (a 1,55 m) que se ve por encima del mostrador y también se puede mirar
 ---
 
 # Etapa 2: la noche (pedidos y actos), tragos, puertas y tormenta
-
-## Cómo armarla (una sola vez)
-
-1. Abrir `SampleScene` y esperar a que compile.
-2. Menú **VR Bar → Armar Etapa 2 (pedidos, tragos, puertas y tormenta)**. La Consola muestra un resumen
-   (en naranja, lo que no encontró).
-3. Guardar la escena (Ctrl+S). No hace falta rehornear la iluminación.
-4. (Ya hecho: la escena quedó commiteada y el menú se borró.)
 
 ## Cómo probar
 
@@ -124,13 +117,6 @@ Durante toda la noche: la puerta de la cocina se abre cuando suena; al abrirse l
 ---
 
 # Etapa 3: cerrar el bar, el habitué, dardos y el arcade
-
-## Cómo armarla (una sola vez)
-
-1. Abrir `SampleScene` y esperar a que compile.
-2. Menú **VR Bar → Armar Etapa 3 (cierre, habitué, dardos y arcade)**. La Consola muestra un resumen.
-3. Guardar la escena (Ctrl+S). No hace falta rehornear.
-4. Probar, commitear la escena y borrar `Assets/Scripts/Editor/SetupEtapa3.cs`.
 
 ## Cómo probar
 
