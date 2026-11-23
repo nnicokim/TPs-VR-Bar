@@ -90,4 +90,8 @@ todo a 44,1 kHz y en **mono** (una fuente 3D se colapsa a un punto: el estéreo 
 - Pista de la apertura: `Botellas (heladera)` suena un momento desde la botella pedida (para que el participante se dé
   vuelta) y después vuelve a su lugar. No se agregó ninguna fuente nueva.
 - Trueno (A8, 3 tomas): fuente `[Etapa2] Trueno (ventana)` junto a la ventana, copiada de la lluvia para heredar su Steam
-  Audio (suena apagado por el vidrio). La dispara el relámpago 0,8–3 s después del destello. Total: 21 fuentes.
+  Audio (suena apagado por el vidrio). La dispara el relámpago 0,8–3 s después del destello. Total: 20 fuentes (límite real 32).
+- Etapa 3: `Dardos` tiene `automatic = false` (los dardos los tira el participante y suenan donde se clavan). En el cierre,
+  el parlante y los zumbidos de neón se apagan con `BarSound.Silence` (fundido y no arranca el clip siguiente); el
+  zumbido del arcade tartamudea con cada golpe y baja cuando revive.
+

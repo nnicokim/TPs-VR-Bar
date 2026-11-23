@@ -20,6 +20,9 @@ namespace BarInteraccion
         public float intensity = 1.6f;
         public bool automatic = true;
 
+        /// <summary>Brillo actual del destello (0 a 1). La oscuridad del cierre se abre con el relámpago.</summary>
+        public float FlashLevel => flashLight != null && intensity > 0f ? Mathf.Clamp01(flashLight.intensity / intensity) : 0f;
+
         void Start()
         {
             if (flashLight != null) { flashLight.intensity = 0f; flashLight.enabled = false; }

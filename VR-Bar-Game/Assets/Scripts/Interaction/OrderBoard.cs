@@ -30,6 +30,7 @@ namespace BarInteraccion
         Transform swingRoot;
         TextMeshPro title, list, footer, note;
         Coroutine swing, noteRoutine;
+        BoardButton[] choiceButtons;
 
         void Awake() => Build();
 
@@ -50,6 +51,43 @@ namespace BarInteraccion
                 else sb.Append($"{l.customer} — <b>{l.drink}</b>\n");
             }
             list.text = sb.ToString();
+        }
+
+        /// <summary>Lista de tareas con casillas: [ ] pendiente, [x] hecha (tachada en verde).</summary>
+        public void SetChecklist(IList<(string text, bool done)> items)
+        {
+            if (list == null) return;
+            var sb = new StringBuilder();
+            foreach (var it in items)
+            {
+                if (it.done) sb.Append($"<color=#{ColorUtility.ToHtmlStringRGB(chalkDone)}>■ <s>{it.text}</s></color>\n");
+                else sb.Append($"□ {it.text}\n");
+            }
+            list.text = sb.ToString();
+        }
+
+        /// <summary>Texto libre en el cuerpo de la pizarra.</summary>
+        public void SetBody(string text) { if (list != null) list.text = text; }
+
+        /// <summary>
+        /// Dos opciones escritas en la pizarra que se eligen con la mirada. Llama a onChoice(0 o 1) y las borra.
+        /// </summary>
+        public void ShowChoice(string optionA, string optionB, System.Action<int> onChoice)
+        {
+            HideChoice();
+            float w = size.x, cy = -hangDrop - size.y * 0.5f;
+            choiceButtons = new[]
+            {
+                BoardButton.Create(swingRoot, optionA, new Vector3(-w * 0.24f, cy - size.y * 0.5f + 0.1f, -0.014f), chalk, () => { HideChoice(); onChoice(0); }),
+                BoardButton.Create(swingRoot, optionB, new Vector3(w * 0.24f, cy - size.y * 0.5f + 0.1f, -0.014f), chalk, () => { HideChoice(); onChoice(1); }),
+            };
+        }
+
+        public void HideChoice()
+        {
+            if (choiceButtons == null) return;
+            foreach (var b in choiceButtons) if (b != null) Destroy(b.gameObject);
+            choiceButtons = null;
         }
 
         /// <summary>Mensaje corto abajo de la lista que se borra solo (por ejemplo, un error).</summary>
@@ -161,6 +199,46 @@ namespace BarInteraccion
             var r = go.GetComponent<MeshRenderer>();
             if (r != null) r.shadowCastingMode = ShadowCastingMode.Off;
             return t;
+        }
+    }
+
+    /// <summary>Opción escrita con tiza en la pizarra: se resalta (crece y se pone cálida) al mirarla y se elige.</summary>
+    public class BoardButton : GazeInteractable
+    {
+        TextMeshPro text;
+        Color baseColor;
+        System.Action onClick;
+
+        public static BoardButton Create(Transform parent, string caption, Vector3 localPos, Color color, System.Action onClick)
+        {
+            var go = new GameObject($"Opción {caption}");
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = localPos;
+            var t = go.AddComponent<TextMeshPro>();
+            t.text = $"[ {caption} ]";
+            t.fontSize = 0.4f;
+            t.fontStyle = FontStyles.Bold;
+            t.alignment = TextAlignmentOptions.Center;
+            t.color = color;
+            t.rectTransform.sizeDelta = new Vector2(0.32f, 0.07f);
+            var col = go.AddComponent<BoxCollider>();
+            col.isTrigger = true;
+            col.size = new Vector3(0.32f, 0.08f, 0.02f);
+            var b = go.AddComponent<BoardButton>();
+            b.text = t;
+            b.baseColor = color;
+            b.onClick = onClick;
+            b.dwellTime = 1.2f;
+            return b;
+        }
+
+        public override void OnSelect(GazePointer pointer) => onClick?.Invoke();
+
+        protected override void ApplyHighlight(float amount)
+        {
+            if (text == null) return;
+            text.color = Color.Lerp(baseColor, highlightColor, amount);
+            transform.localScale = Vector3.one * Mathf.Lerp(1f, 1.12f, Ease.OutCubic(amount));
         }
     }
 }

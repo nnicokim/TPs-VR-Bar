@@ -14,8 +14,9 @@ namespace BarInteraccion
     ///                  después otro pide un trago. Con pistas: lo pedido late y, si está detrás, suena.
     ///  2. Hora pico  — sube la música, los clientes entran más seguido y hay hasta dos pedidos a la vez,
     ///                  sin pistas: el participante ya sabe hacerlo (el desafío crece con la habilidad).
-    ///  3. Cierre     — no entra nadie más, un relámpago marca el cambio, la música baja, los últimos se van
-    ///                  y la pizarra muestra cómo fue la noche. (La secuencia de cierre es de la etapa 3.)
+    ///  3. Cierre     — no entra nadie más, un relámpago marca el cambio, la música baja y los últimos se van.
+    ///                  Queda el habitué, que pide "una más": el participante decide si se la sirve o cierra.
+    ///                  Después, la ClosingSequence: apagar música, neones, cortinas y luces, y la tarjeta final.
     ///
     /// No hay tiempo límite ni castigo: un error se anota en la pizarra y el pedido sigue esperando.
     /// </summary>
@@ -36,6 +37,12 @@ namespace BarInteraccion
         public ShotStation shotStation;
         public TeleportPoint barPoint;
         public LightningStorm storm;
+        public ClosingSequence closing;
+        public DartGame darts;
+
+        [Header("El habitué")]
+        public string regularName = "Don Julio";
+        public string regularDrink = "Whisky";
 
         [Header("Sonidos")]
         [Tooltip("Puerta de entrada: cada cliente entra con la campanita (y la puerta se abre).")]
@@ -61,6 +68,8 @@ namespace BarInteraccion
         public Act CurrentAct { get; private set; } = Act.Esperando;
         public int ServedOk { get; private set; }
         public int Mistakes { get; private set; }
+        /// <summary>null: todavía no decidió; true: le sirvió la última; false: cerró.</summary>
+        public bool? ServedRegular { get; private set; }
         public event System.Action<Act> ActChanged;
 
         readonly List<Order> orders = new List<Order>();
@@ -70,6 +79,7 @@ namespace BarInteraccion
         bool hintMoved;
         int customerIndex;
         bool hintsEnabled;
+        bool regularPending;
 
         IEnumerable<Order> Pending => orders.Where(o => !o.done);
 
@@ -143,6 +153,60 @@ namespace BarInteraccion
                 if (entranceSound != null) entranceSound.PlayOnce();
                 yield return new WaitForSeconds(Random.Range(3f, 5f));
             }
+
+            // El habitué: "¿una más?" (una decisión con consecuencia).
+            yield return Regular();
+
+            // Cerrar el bar.
+            if (closing != null)
+            {
+                closing.Summary = BuildSummary();
+                closing.Begin();
+                while (!closing.Finished) { closing.Summary = BuildSummary(); yield return null; }
+            }
+        }
+
+        IEnumerator Regular()
+        {
+            int choice = -1;
+            board?.SetTitle(regularName.ToUpperInvariant());
+            board?.SetBody($"Queda uno solo en la barra.\n—¿Me servís la última, pibe?");
+            board?.SetFooter("Cierre");
+            board?.Swing(0.8f);
+            board?.ShowChoice("Servirle", "Cerramos", c => choice = c);
+            yield return new WaitUntil(() => choice >= 0);
+
+            if (choice == 0)
+            {
+                ServedRegular = true;
+                var order = new Order { customer = regularName, drink = regularDrink };
+                orders.Add(order);
+                regularPending = true;
+                RefreshBoard();
+                yield return new WaitUntil(() => order.done);
+                regularPending = false;
+                board?.SetTitle(regularName.ToUpperInvariant());
+                board?.SetBody("—Gracias, pibe. Hasta mañana.");
+                yield return new WaitForSeconds(3f);
+            }
+            else
+            {
+                ServedRegular = false;
+                board?.SetBody($"{regularName} se pone el piloto\ny sale a la lluvia.");
+                yield return new WaitForSeconds(2.5f);
+            }
+            if (entranceSound != null) entranceSound.PlayOnce(); // se va
+            yield return new WaitForSeconds(3f);
+        }
+
+        string BuildSummary()
+        {
+            int total = openingOrders.Length + rushOrders.Length + (ServedRegular == true ? 1 : 0);
+            string s = $"Serviste {ServedOk} de {total} pedidos" + (Mistakes > 0 ? $" ({Mistakes} {(Mistakes == 1 ? "error" : "errores")})." : ", sin errores.");
+            if (ServedRegular == true) s += $"\nLe serviste la última a {regularName}.";
+            else if (ServedRegular == false) s += $"\n{regularName} se fue sin su última.";
+            if (darts != null && darts.BestRound > 0) s += $"\nMejor ronda de dardos: {darts.BestRound}.";
+            return s + "\nLa lluvia sigue.";
         }
 
         IEnumerator CustomerArrives(string drink)
@@ -165,6 +229,7 @@ namespace BarInteraccion
         void OnDrinkServed(string drink)
         {
             if (CurrentAct == Act.Esperando) return;
+            if (CurrentAct == Act.Cierre && !regularPending) return; // ya cerró la barra
             var order = Pending.FirstOrDefault(o => o.drink == drink);
             if (order != null)
             {
@@ -206,6 +271,9 @@ namespace BarInteraccion
                     break;
                 case Act.Cierre:
                     if (musicSound != null) musicSound.SetVolumeScale(musicClosing, 6f);
+                    board?.SetTitle("ÚLTIMOS");
+                    board?.SetBody("Ya no entra nadie.\nSe van los últimos.");
+                    board?.SetFooter("Cierre");
                     break;
             }
             RefreshBoard();
@@ -215,18 +283,10 @@ namespace BarInteraccion
         void RefreshBoard()
         {
             if (board == null) return;
-            if (CurrentAct == Act.Cierre)
-            {
-                board.SetTitle("CERRAMOS");
-                int total = openingOrders.Length + rushOrders.Length;
-                board.SetLines(new List<(string, string, bool)>(),
-                    $"Serviste {ServedOk} de {total} pedidos." + (Mistakes > 0 ? $"\nTe equivocaste {Mistakes} {(Mistakes == 1 ? "vez" : "veces")}." : "\nSin errores.") + "\nLa lluvia sigue.");
-                board.SetFooter("Última ronda");
-                return;
-            }
+            if (CurrentAct == Act.Cierre && !regularPending) return; // en el cierre la pizarra la manejan el habitué y la ClosingSequence
             board.SetTitle("PEDIDOS");
             board.SetLines(orders.Select(o => (o.customer, o.drink, o.done)).ToList(), "Nadie esperando.");
-            string act = CurrentAct == Act.Apertura ? "Apertura" : CurrentAct == Act.HoraPico ? "Hora pico" : "";
+            string act = CurrentAct == Act.Apertura ? "Apertura" : CurrentAct == Act.HoraPico ? "Hora pico" : "Cierre";
             board.SetFooter($"{act} · Servidos: {ServedOk}" + (Mistakes > 0 ? $" · Errores: {Mistakes}" : ""));
         }
 

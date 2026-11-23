@@ -6,8 +6,8 @@ interacción para Cardboard (mirada + un toque) y la primera acción completa: *
 
 ## Estado
 
-La etapa 1 ya está armada y guardada en `SampleScene` (el menú que la armaba se borró: queda en el historial de git).
-La etapa 2 se arma con un menú temporal (ver más abajo) que también se borra una vez guardada la escena.
+Las etapas 1 y 2 ya están armadas y guardadas en `SampleScene` (los menús que las armaban se borraron: quedan en el
+historial de git). La etapa 3 se arma con un menú temporal (ver al final) que también se borra una vez guardada la escena.
 
 ## Cómo probar (etapa 1)
 
@@ -67,8 +67,7 @@ flotante (a 1,55 m) que se ve por encima del mostrador y también se puede mirar
 2. Menú **VR Bar → Armar Etapa 2 (pedidos, tragos, puertas y tormenta)**. La Consola muestra un resumen
    (en naranja, lo que no encontró).
 3. Guardar la escena (Ctrl+S). No hace falta rehornear la iluminación.
-4. Probar, commitear la escena y **borrar** `Assets/Scripts/Editor/SetupEtapa2.cs` (correrlo de nuevo rehace los objetos
-   y pierde los ajustes manuales).
+4. (Ya hecho: la escena quedó commiteada y el menú se borró.)
 
 ## Cómo probar
 
@@ -122,7 +121,79 @@ Durante toda la noche: la puerta de la cocina se abre cuando suena; al abrirse l
 | **Flow** | Desafío creciente con la habilidad: apertura guiada de a un pedido → hora pico sin pistas y con dos pedidos a la vez → descompresión en el cierre. Sin tiempo límite ni castigo (el error se anota y se corrige), feedback inmediato en cada paso, música que acompaña la intensidad. |
 | **Animación** | Botella en vuelo e inclinación, puertas con rebote al cerrarse, pizarra con balanceo amortiguado, relámpagos, vasos que entran y se van. |
 
+---
+
+# Etapa 3: cerrar el bar, el habitué, dardos y el arcade
+
+## Cómo armarla (una sola vez)
+
+1. Abrir `SampleScene` y esperar a que compile.
+2. Menú **VR Bar → Armar Etapa 3 (cierre, habitué, dardos y arcade)**. La Consola muestra un resumen.
+3. Guardar la escena (Ctrl+S). No hace falta rehornear.
+4. Probar, commitear la escena y borrar `Assets/Scripts/Editor/SetupEtapa3.cs`.
+
+## Cómo probar
+
+- **El habitué.** Al terminar la hora pico, después de que se van los últimos, queda Don Julio: la pizarra pregunta
+  *"¿Me servís la última, pibe?"* con dos opciones escritas con tiza que se eligen con la mirada: **Servirle** (pide un
+  whisky; al servirlo, "Gracias, pibe. Hasta mañana.") o **Cerramos** (se pone el piloto y sale a la lluvia). La
+  decisión aparece en la tarjeta final.
+- **Cerrar el bar.** La pizarra pasa a ser una lista de tareas, en cualquier orden:
+  - **Apagar la música:** mirar el parlante (caja con LED verde, arriba en la esquina): la música baja y el LED se apaga.
+  - **Apagar los neones:** mirar el cartel EXIT y la palmera: parpadean (el zumbido tartamudea) y se apagan.
+  - **Cerrar las cortinas:** mirar cada ventana: las cortinas se despliegan hasta el centro.
+  - **Apagar las luces:** el **tablero de luces** junto a la puerta de la cocina (detrás de la barra) tiene tres llaves:
+    SALÓN, JUEGOS y BARRA. Cada una apaga las bombillas de su zona y oscurece la vista un escalón (las luces están
+    horneadas, así que la oscuridad es un velo sobre la cámara que se abre con cada relámpago).
+  - Al terminar: "Buenas noches", oscuridad, un último relámpago ilumina el bar vacío y aparece la **tarjeta final** con
+    el resumen de la noche y *"Mirá acá para volver a empezar"* (recarga la escena).
+- **Dardos** (en cualquier momento, desde el aro *Dardos*): mirar el tablero y elegir → el dardo sale de la mano y se clava
+  donde se mira, con un desvío (la puntería humana). Puntaje reglamentario (sectores, doble, triple, bull) en la pizarrita
+  del costado. Tres tiros por ronda; después, mirar el tablero de nuevo junta los dardos (vuelan a la mesa). Alterna
+  azules y rojos. La mejor ronda aparece en la tarjeta final.
+- **El arcade "fuera de servicio"**: no tiene cartel ni contorno; solo el retículo delata que responde. Elegirlo (tocar, o
+  mirarlo 2,5 s) es darle un golpe: se sacude y el zumbido tartamudea. Al tercero se cae el cartel, la pantalla se prende
+  como un tubo viejo y arranca un Pong que se juega solo ("INSERT COIN"); el zumbido roto se calma.
+
+## Qué agrega a la escena
+
+| Dónde | Qué |
+|---|---|
+| `Interaccion (Etapa 3)/[Etapa3] Parlante` | `SpeakerBox`: caja con cono y LED donde sale la música. |
+| `Bar/Signs/Exit_Sign`, `Neon_Palm_Tree` | `NeonSign` + collider. Sin *Batching Static*. |
+| `Windows/Window Left|Right/Cortinas` | `CurtainPair` + `[Etapa3] Zona cortinas` (collider sobre la ventana). |
+| `Interaccion (Etapa 3)/[Etapa3] Tablero de luces` | Tres `LightSwitch` (placa, tecla y rótulo se arman solos) con las bombillas y luces de cada zona. |
+| `Interaccion (Etapa 3)/Cierre del bar` | `ClosingSequence`: la lista de tareas, la oscuridad por escalones y el final. |
+| `Bar/Darts/dartboard_1k` | `DartGame` + collider; usa los 6 dardos de `Darts Set (Generated)`. Pizarrita al costado. |
+| `Bar/Arcade/Arcade` | `ArcadeSecret` + collider; usa el cartel `Out of Order`. |
+| `Pedidos y actos` | Referencias a `Cierre del bar` y a los dardos (para el resumen). |
+| `Audio (Bar)` | `Dardos` ya no suena solo (ahora tira el participante). La música y los zumbidos de neón se apagan con `BarSound.Silence`. |
+
+## Scripts nuevos
+
+| Script | Qué hace |
+|---|---|
+| `ClosingTask` | Base de las tareas de cierre: solo se pueden usar cuando el cierre las "arma"; laten mientras están pendientes. |
+| `SpeakerBox`, `NeonSign`, `CurtainPair`, `LightSwitch` | Las cuatro tareas (con su animación). |
+| `ClosingSequence`, `DarknessOverlay`, `EndCard` | El cierre, la oscuridad que se abre con los relámpagos y la tarjeta final con reinicio. |
+| `Emission` | Prende/apaga la emisión sin tocar materiales (URP Lit y glTFast). |
+| `DartGame` | Tiro apuntado con desvío gaussiano, dardo que tiembla al clavarse, puntaje reglamentario, juntar dardos. |
+| `ArcadeSecret`, `ArcadeScreen` | Golpes, cartel que cae, pantalla que se prende y Pong en modo demo. |
+| `OrderBoard` (cambios) | Lista de tareas (`SetChecklist`) y opciones con la mirada (`ShowChoice`, `BoardButton`). |
+| `OrderManager` (cambios) | El habitué y el paso al cierre; resumen de la noche. |
+| `BarSound` (cambio) | `Silence(s)`: apaga y no deja que arranque el clip siguiente. |
+
+## Qué cubre de la consigna (etapa 3)
+
+| Eje | Dónde está |
+|---|---|
+| **Significado** | El participante cierra *su* bar: el final lo hace él, tarea por tarea. El habitué es una decisión sin respuesta correcta (¿la última o cerrar?) que queda en el resumen. La tarjeta final cuenta *su* noche. |
+| **Patrones** | Lista de tareas diegética (pizarra) con orden libre; tablero de luces con llaves (mapeo natural: una llave, una zona); apuntar con la cabeza como mecánica de juego (dardos); reinicio diegético con la mirada. |
+| **Ofrecimientos** | Lo pendiente late; el LED del parlante dice "prendido"; las llaves tienen la tecla arriba (prendida); el zumbido del neón guía hacia él. El arcade es un ofrecimiento **escondido**: solo el retículo delata que responde. |
+| **Flow** | Descompresión después de la hora pico: tareas simples, sin tiempo, con feedback fuerte (oscuridad que avanza, silencio que crece). Los dardos son un desafío opcional con puntaje y "mejor ronda". |
+| **Animación** | Parpadeo del neón, cortinas que se despliegan, teclas, oscuridad por escalones, último relámpago, vuelo y temblor del dardo, golpes al arcade, cartel que cae con rebote, tubo que se prende, Pong. |
+
 ## Próxima etapa
 
-3. Juegos (dardos y pool), arcade "secreto", el pedido opcional del habitué ("¿una más?") y la secuencia de cierre
-   (neones, cortinas y luces) con Timeline.
+4. Pool (tiro de exhibición con física), prueba en Cardboard (rendimiento, tamaños, dwell) con personas que no conozcan
+   el proyecto, video y entrega.

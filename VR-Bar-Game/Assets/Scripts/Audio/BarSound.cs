@@ -86,7 +86,7 @@ namespace BarAudio
             source.loop = false;
             if (!automatic) yield break; // lo dispara la interacción
             yield return new WaitForSeconds(Random.Range(0f, gap.x));
-            while (true)
+            while (automatic) // Silence() lo corta: no arranca el clip siguiente
             {
                 AudioClip clip = PickClip();
                 float length = 0f;
@@ -115,6 +115,13 @@ namespace BarAudio
         {
             transform.position = position;
             PlayOnce();
+        }
+
+        /// <summary>Apaga del todo: baja el volumen en "seconds" y deja de sonar solo (por ejemplo, al apagar el parlante).</summary>
+        public void Silence(float seconds)
+        {
+            automatic = false;
+            FadeOut(seconds);
         }
 
         /// <summary>Baja el volumen hasta cero en "seconds" y corta (por ejemplo, al cerrar la canilla).</summary>
