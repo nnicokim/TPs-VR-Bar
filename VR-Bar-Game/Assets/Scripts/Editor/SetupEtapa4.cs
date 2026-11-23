@@ -50,8 +50,11 @@ namespace BarInteraccion.EditorTools
             float halfL = (longX ? tb.extents.x : tb.extents.z) * LongRatio;
             float halfS = (longX ? tb.extents.z : tb.extents.x) * ShortRatio;
             Vector3 L = longX ? Vector3.right : Vector3.forward, S = longX ? Vector3.forward : Vector3.right;
-            float r = ballRs.Average(b => Mathf.Min(b.bounds.extents.x, b.bounds.extents.z));
-            float feltY = ballRs.Min(b => b.bounds.min.y);
+            // Medidas con los vértices reales (el AABB de una bola girada es más grande que la bola).
+            var ballBox = ballRs.ToDictionary(b => b, WorldBox);
+            float r = ballRs.Average(b => (ballBox[b].size.x + ballBox[b].size.z) * 0.25f);
+            float feltY = ballRs.Min(b => ballBox[b].min.y);
+            float colR = r * 0.985f; // el triángulo del modelo está apenas superpuesto: así nada se empuja al empezar
             Vector3 center = new Vector3(tb.center.x, 0f, tb.center.z);
             log.AppendLine($"• Mesa: campo {halfL * 2:0.00} × {halfS * 2:0.00} m, paño a {feltY:0.000} m, bolas de {r * 2 * 100:0.0} cm.");
 
@@ -99,8 +102,8 @@ namespace BarInteraccion.EditorTools
             log.AppendLine($"• Paño, 6 bandas, bordes y {pockets} troneras.");
 
             // Bolas: la blanca es la que está lejos del triángulo.
-            Vector3 rackCenter = Average(ballRs.Select(b => b.bounds.center));
-            var cueBallR = ballRs.OrderByDescending(b => (b.bounds.center - rackCenter).sqrMagnitude).First();
+            Vector3 rackCenter = Average(ballRs.Select(b => ballBox[b].center));
+            var cueBallR = ballRs.OrderByDescending(b => (ballBox[b].center - rackCenter).sqrMagnitude).First();
             var balls = new List<PoolBall>();
             int n = 0;
             foreach (var br in ballRs.OrderBy(b => b == cueBallR ? 0 : 1))
@@ -109,7 +112,7 @@ namespace BarInteraccion.EditorTools
                 var body = new GameObject(br == cueBallR ? "Bola blanca" : $"Bola {++n}");
                 Undo.RegisterCreatedObjectUndo(body, "Armar Etapa 4");
                 body.transform.SetParent(root.transform, false);
-                Vector3 c = br.bounds.center; c.y = feltY + r + 0.0005f;
+                Vector3 c = ballBox[br].center; c.y = feltY + colR + 0.0002f;
                 body.transform.position = c;
                 var rb = body.AddComponent<Rigidbody>();
                 rb.mass = 0.17f;
@@ -118,7 +121,7 @@ namespace BarInteraccion.EditorTools
                 rb.interpolation = RigidbodyInterpolation.Interpolate;
                 rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
                 var sc = body.AddComponent<SphereCollider>();
-                sc.radius = r;
+                sc.radius = colR;
                 sc.contactOffset = 0.002f;
                 sc.sharedMaterial = ballMat;
                 var pb = body.AddComponent<PoolBall>();
@@ -313,6 +316,17 @@ namespace BarInteraccion.EditorTools
             var mf = r.GetComponent<MeshFilter>();
             string mesh = mf != null && mf.sharedMesh != null ? mf.sharedMesh.name : "";
             return (mesh + " " + r.gameObject.name).ToLowerInvariant().Trim();
+        }
+
+        /// <summary>Caja en el mundo a partir de los vértices (no del AABB del renderer).</summary>
+        static Bounds WorldBox(MeshRenderer r)
+        {
+            var mf = r.GetComponent<MeshFilter>();
+            var t = r.transform;
+            var verts = mf.sharedMesh.vertices;
+            var box = new Bounds(t.TransformPoint(verts[0]), Vector3.zero);
+            foreach (var v in verts) box.Encapsulate(t.TransformPoint(v));
+            return box;
         }
 
         static float MaxSize(Bounds b) => Mathf.Max(b.size.x, Mathf.Max(b.size.y, b.size.z));

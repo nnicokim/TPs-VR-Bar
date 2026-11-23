@@ -49,6 +49,13 @@ namespace BarInteraccion
         [Header("Visual")]
         public Material lineMaterial;
 
+        [Header("Luz de las bolas y el taco")]
+        [Tooltip("Las lámparas de la mesa son de área (solo horneadas) y no hay sondas de luz sobre la mesa: las bolas, " +
+                 "que se mueven, se iluminan con esta luz de arriba en vez de con las sondas. Se puede ajustar en Play.")]
+        public Color lampColor = new Color(1f, 0.94f, 0.82f);
+        [Range(0f, 4f)] public float lampIntensity = 1.6f;
+        public Color fillColor = new Color(0.30f, 0.27f, 0.24f);
+
         public Phase State { get; private set; } = Phase.Idle;
         public int Shots { get; private set; }
         public int Pocketed { get; private set; }
@@ -75,6 +82,36 @@ namespace BarInteraccion
             if (highlightRoot == null && cueBall != null) highlightRoot = cueBall.transform;
             idleDwell = dwellTime > 0f ? dwellTime : 1.2f;
             dwellTime = idleDwell;
+        }
+
+        void Start()
+        {
+            ApplyLighting();
+            foreach (var b in balls) if (b != null) b.Settle(); // quietas hasta el primer tiro
+        }
+
+        void OnValidate() { if (Application.isPlaying && balls != null) ApplyLighting(); }
+
+        /// <summary>Luz "de lámpara" para lo que se mueve sobre la mesa (armónicos esféricos propios).</summary>
+        void ApplyLighting()
+        {
+            var sh = new SphericalHarmonicsL2();
+            sh.AddAmbientLight(fillColor);
+            sh.AddDirectionalLight(Vector3.up, lampColor, lampIntensity);
+            var coefficients = new[] { sh };
+            var block = new MaterialPropertyBlock();
+            var roots = new List<Transform>();
+            foreach (var b in balls) if (b != null) roots.Add(b.transform);
+            if (cue != null) roots.Add(cue);
+            foreach (var root in roots)
+                foreach (var r in root.GetComponentsInChildren<MeshRenderer>(true))
+                {
+                    if (r.GetComponent<NoGazeOutline>() != null) continue;
+                    r.lightProbeUsage = LightProbeUsage.CustomProvided;
+                    r.GetPropertyBlock(block);
+                    block.CopySHCoefficientArraysFrom(coefficients);
+                    r.SetPropertyBlock(block);
+                }
         }
 
         protected override bool IsAvailable()
@@ -187,7 +224,7 @@ namespace BarInteraccion
                 still = moving ? 0f : still + Time.deltaTime;
                 yield return null;
             }
-            foreach (var b in balls) if (b != null && !b.Pocketed) b.Stop();
+            foreach (var b in balls) if (b != null && !b.Pocketed) b.Settle();
 
             if (cueBall.Pocketed) yield return RespawnCueBall();
             State = Phase.Idle;
@@ -222,6 +259,7 @@ namespace BarInteraccion
 
         public void OnBallCollision(PoolBall ball, Collision collision)
         {
+            if (State != Phase.Rolling) return; // solo suenan los choques de un tiro
             if (collision.collider.GetComponent<PoolBall>() == null) return;
             float v = collision.relativeVelocity.magnitude;
             if (v < 0.12f || Time.time - lastHitSound < 0.04f) return;
@@ -238,7 +276,7 @@ namespace BarInteraccion
         {
             if (ball.Pocketed) return;
             ball.Pocket(pocketCenter, feltY);
-            Play(pocketClip, pocketCenter, 0.9f);
+            if (State == Phase.Rolling) Play(pocketClip, pocketCenter, 0.9f);
             if (!ball.isCue)
             {
                 Pocketed++;
@@ -385,6 +423,13 @@ namespace BarInteraccion
             Body.angularVelocity = Vector3.zero;
         }
 
+        /// <summary>Frena y deja la bola dormida: no se mueve hasta que otra la golpee.</summary>
+        public void Settle()
+        {
+            Stop();
+            Body.Sleep();
+        }
+
         public void Pocket(Vector3 pocketCenter, float feltY)
         {
             Pocketed = true;
@@ -414,7 +459,7 @@ namespace BarInteraccion
             transform.localScale = startScale;
             GetComponent<Collider>().enabled = true;
             Body.isKinematic = false;
-            Stop();
+            Settle();
         }
     }
 

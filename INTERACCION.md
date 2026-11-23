@@ -228,7 +228,7 @@ Se puede correr de nuevo: deshace lo que armó antes y vuelve a medir el modelo.
 
 | Script | Qué hace |
 |---|---|
-| `PoolGame` | Apuntar con la mirada (dirección y fuerza), dwell propio para el tiro, animación del taco, espera a que todo se quede quieto, reposición de la blanca, sonidos por choque. Ajusta `Physics.bounceThreshold` y el paso fijo (10 ms) para bolas chicas. |
+| `PoolGame` | Apuntar con la mirada (dirección y fuerza), dwell propio para el tiro, animación del taco, espera a que todo se quede quieto, reposición de la blanca, sonidos por choque. Ajusta `Physics.bounceThreshold` y el paso fijo (10 ms) para bolas chicas. Las bolas arrancan dormidas (nada se mueve hasta el primer tiro) y solo suenan los choques de un tiro. Ilumina bolas y taco con una "lámpara" propia (armónicos esféricos: `lampColor`, `lampIntensity`, `fillColor`, ajustables en Play), porque las lámparas de la mesa son de área, solo horneadas, y no hay sondas de luz sobre la mesa. |
 | `PoolBall`, `PoolPocket`, `PoolResetButton` | Bola física (caer en la tronera, reponerse), tronera y cartel para rearmar. |
 | `SessionLog` | Registro de la sesión en CSV para la prueba con personas (ver abajo). |
 | `BarSound` (cambio) | `PlaySpecific(clip, posición, volumen)`: toca un clip puntual en un lugar. |
