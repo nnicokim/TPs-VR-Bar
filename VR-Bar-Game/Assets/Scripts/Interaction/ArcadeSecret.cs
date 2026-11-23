@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Linq;
 using BarAudio;
 using TMPro;
 using UnityEngine;
@@ -36,6 +37,33 @@ namespace BarInteraccion
             cabinetRest = cabinet.localRotation;
             screenNormal = screenNormal.sqrMagnitude > 0f ? screenNormal.normalized : Vector3.left;
             if (dwellTime <= 0f) dwellTime = 2.5f; // "mirarlo un rato largo"
+            FindScreen();
+        }
+
+        /// <summary>
+        /// Ubica la pantalla sobre la malla real del modelo (material "MAT_Screen"): centro de su cara frontal,
+        /// su inclinación y su tamaño. Si no la encuentra, usa los valores del Inspector.
+        /// </summary>
+        void FindScreen()
+        {
+            foreach (var r in GetComponentsInChildren<MeshRenderer>(true))
+            {
+                if (!r.sharedMaterials.Any(m => m != null && m.name.ToLowerInvariant().Contains("screen"))) continue;
+                Bounds lb = r.localBounds;
+                Vector3 e = lb.extents;
+                int thin = e.x <= e.y && e.x <= e.z ? 0 : (e.y <= e.z ? 1 : 2);
+                Vector3[] axes = { Vector3.right, Vector3.up, Vector3.forward };
+                Transform t = r.transform;
+                Vector3 n = t.TransformDirection(axes[thin]).normalized;
+                if (Vector3.Dot(n, screenNormal) < 0f) n = -n; // la cara que mira al salón
+                float half = t.TransformVector(axes[thin] * e[thin]).magnitude;
+                float a = t.TransformVector(axes[(thin + 1) % 3] * e[(thin + 1) % 3] * 2f).magnitude;
+                float b = t.TransformVector(axes[(thin + 2) % 3] * e[(thin + 2) % 3] * 2f).magnitude;
+                screenNormal = n;
+                screenCenter = t.TransformPoint(lb.center) + n * half;
+                screenSize = new Vector2(Mathf.Max(a, b), Mathf.Min(a, b)) * 0.94f; // un poco adentro del marco
+                return;
+            }
         }
 
         protected override bool IsAvailable() => !busy && !Fixed;
@@ -92,7 +120,7 @@ namespace BarInteraccion
                 yield return Ease.Run(0.12f, t => sign.position = Vector3.Lerp(bounce, p1, Ease.InCubic(t)));
             }
             yield return new WaitForSeconds(0.4f);
-            ArcadeScreen.Create(transform, screenCenter + screenNormal * 0.004f, screenNormal, screenSize);
+            ArcadeScreen.Create(transform, screenCenter + screenNormal * 0.003f, screenNormal, screenSize);
             if (hum != null) hum.SetVolumeScale(0.35f, 2f); // anda: ya no zumba roto
         }
     }
@@ -113,7 +141,8 @@ namespace BarInteraccion
         {
             var go = new GameObject("Pantalla arcade", typeof(RectTransform));
             go.transform.SetParent(parent, true);
-            go.transform.SetPositionAndRotation(center, Quaternion.LookRotation(-normal, Vector3.up));
+            // Mira hacia el salón y respeta la inclinación de la pantalla.
+            go.transform.SetPositionAndRotation(center, Quaternion.LookRotation(-normal, Vector3.ProjectOnPlane(Vector3.up, normal)));
             var canvas = go.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
             var s = go.AddComponent<ArcadeScreen>();

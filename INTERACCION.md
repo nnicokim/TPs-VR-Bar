@@ -148,12 +148,14 @@ Durante toda la noche: la puerta de la cocina se abre cuando suena; al abrirse l
   - Al terminar: "Buenas noches", oscuridad, un último relámpago ilumina el bar vacío y aparece la **tarjeta final** con
     el resumen de la noche y *"Mirá acá para volver a empezar"* (recarga la escena).
 - **Dardos** (en cualquier momento, desde el aro *Dardos*): mirar el tablero y elegir → el dardo sale de la mano y se clava
-  donde se mira, con un desvío (la puntería humana). Puntaje reglamentario (sectores, doble, triple, bull) en la pizarrita
+  donde se mira, con un desvío (la puntería humana). Después de cada tiro aparece una **vista de cerca** (una cámara junto al
+  tablero, como en las transmisiones) con la jugada ("T20 · +60") durante ~3 s, y un anillo destella donde se clavó. Puntaje reglamentario (sectores, doble, triple, bull) en la pizarrita
   del costado. Tres tiros por ronda; después, mirar el tablero de nuevo junta los dardos (vuelan a la mesa). Alterna
   azules y rojos. La mejor ronda aparece en la tarjeta final.
 - **El arcade "fuera de servicio"**: no tiene cartel ni contorno; solo el retículo delata que responde. Elegirlo (tocar, o
   mirarlo 2,5 s) es darle un golpe: se sacude y el zumbido tartamudea. Al tercero se cae el cartel, la pantalla se prende
-  como un tubo viejo y arranca un Pong que se juega solo ("INSERT COIN"); el zumbido roto se calma.
+  como un tubo viejo **sobre la pantalla real del modelo** (la busca por su material `MAT_Screen`, con su inclinación) y
+  arranca un Pong que se juega solo ("INSERT COIN"); el zumbido roto se calma.
 
 ## Qué agrega a la escena
 
@@ -177,7 +179,7 @@ Durante toda la noche: la puerta de la cocina se abre cuando suena; al abrirse l
 | `SpeakerBox`, `NeonSign`, `CurtainPair`, `LightSwitch` | Las cuatro tareas (con su animación). |
 | `ClosingSequence`, `DarknessOverlay`, `EndCard` | El cierre, la oscuridad que se abre con los relámpagos y la tarjeta final con reinicio. |
 | `Emission` | Prende/apaga la emisión sin tocar materiales (URP Lit y glTFast). |
-| `DartGame` | Tiro apuntado con desvío gaussiano, dardo que tiembla al clavarse, puntaje reglamentario, juntar dardos. |
+| `DartGame` | Tiro apuntado con desvío gaussiano, dardo que tiembla al clavarse, puntaje reglamentario, juntar dardos, vista de cerca (cámara a una RenderTexture, solo activa mientras se ve) y anillo de impacto. |
 | `ArcadeSecret`, `ArcadeScreen` | Golpes, cartel que cae, pantalla que se prende y Pong en modo demo. |
 | `OrderBoard` (cambios) | Lista de tareas (`SetChecklist`) y opciones con la mirada (`ShowChoice`, `BoardButton`). |
 | `OrderManager` (cambios) | El habitué y el paso al cierre; resumen de la noche. |

@@ -4,6 +4,7 @@ using BarAudio;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.UI;
 
 namespace BarInteraccion
 {
@@ -13,6 +14,8 @@ namespace BarInteraccion
     /// alternando azules y rojos. El puntaje sigue el tablero reglamentario (sectores, doble, triple, bull)
     /// y se anota en una pizarrita al lado. Después de 3 tiros, mirar el tablero de nuevo junta los dardos.
     /// Solo se puede tirar de cerca (desde el punto "Dardos").
+    /// Como desde 2,4 m un dardo clavado casi no se ve, después de cada tiro aparece una vista de cerca
+    /// (una cámara junto al tablero, como en las transmisiones de dardos) con la jugada, y un anillo marca el impacto.
     /// </summary>
     public class DartGame : GazeInteractable
     {
@@ -38,6 +41,12 @@ namespace BarInteraccion
         [Tooltip("Desvío del tiro (desvío estándar, m).")]
         public float spread = 0.035f;
 
+        [Header("Vista de cerca")]
+        public bool showCloseUp = true;
+        public float closeUpSeconds = 2.8f;
+        [Tooltip("Distancia de la cámara de cerca al tablero (m).")]
+        public float closeUpDistance = 0.55f;
+
         [Header("Pizarrita")]
         public Vector3 scorePanelPosition;
         public Material panelMaterial;
@@ -52,6 +61,12 @@ namespace BarInteraccion
         readonly List<string> marks = new List<string>();
         bool busy;
         TextMeshPro panelText;
+        Camera closeCam;
+        RenderTexture closeTex;
+        Canvas closeCanvas;
+        TextMeshProUGUI closeCaption;
+        Coroutine closeRoutine;
+        static Sprite ringSprite;
 
         void Awake()
         {
@@ -114,6 +129,14 @@ namespace BarInteraccion
             marks.Add(mark);
             thrown++;
             UpdatePanel();
+            StartCoroutine(HitMarker(target));
+            if (showCloseUp)
+            {
+                string caption = points > 0 ? $"{mark}  ·  +{points}" : "Afuera";
+                if (thrown == 3) caption += $"\n<size=75%>Ronda: {roundScore}</size>";
+                if (closeRoutine != null) StopCoroutine(closeRoutine);
+                closeRoutine = StartCoroutine(CloseUp(caption));
+            }
 
             // Tiembla clavado.
             Vector3 finalDir = BezierTangent(start, control, stuck, 1f);
@@ -172,6 +195,109 @@ namespace BarInteraccion
             if (dir.sqrMagnitude < 1e-8f) dir = -boardNormal;
             dart.rotation = Quaternion.FromToRotation(axisLocal, dir.normalized);
             dart.position += tip - dart.TransformPoint(tipLocal);
+        }
+
+        // ---------- Vista de cerca ----------
+
+        IEnumerator CloseUp(string caption)
+        {
+            if (closeCam == null) BuildCloseUp();
+            Transform cam = GazePointer.Instance != null ? GazePointer.Instance.transform : null;
+            if (cam == null) yield break;
+
+            // Panel entre el participante y el tablero, corrido hacia un costado para no taparlo.
+            Vector3 toBoard = boardCenter - cam.position;
+            Vector3 flat = toBoard; flat.y = 0f;
+            Vector3 side = Vector3.Cross(Vector3.up, flat.normalized);
+            Vector3 pos = cam.position + toBoard * 0.5f + side * 0.45f + Vector3.up * 0.05f;
+            closeCanvas.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(pos - cam.position, Vector3.up));
+            closeCaption.text = caption;
+
+            closeCam.enabled = true;
+            closeCanvas.gameObject.SetActive(true);
+            Transform panel = closeCanvas.transform;
+            Vector3 full = Vector3.one * 0.001f;
+            yield return Ease.Run(0.25f, t => panel.localScale = full * Mathf.Lerp(0.6f, 1f, Ease.OutBack(t)));
+            yield return new WaitForSeconds(closeUpSeconds);
+            yield return Ease.Run(0.2f, t => panel.localScale = full * Mathf.Lerp(1f, 0.6f, t));
+            closeCanvas.gameObject.SetActive(false);
+            closeCam.enabled = false; // solo renderiza mientras se ve
+            closeRoutine = null;
+        }
+
+        void BuildCloseUp()
+        {
+            // Cámara mirando el tablero de frente, encuadrando la zona de puntaje.
+            var camGo = new GameObject("Camara de cerca (dardos)");
+            camGo.transform.SetParent(transform.parent, true);
+            camGo.transform.SetPositionAndRotation(boardCenter + boardNormal * closeUpDistance, Quaternion.LookRotation(-boardNormal, Vector3.up));
+            closeCam = camGo.AddComponent<Camera>();
+            closeCam.stereoTargetEye = StereoTargetEyeMask.None; // no es la cámara del visor
+            closeCam.nearClipPlane = 0.05f;
+            closeCam.farClipPlane = closeUpDistance + 1f;
+            closeCam.fieldOfView = 2f * Mathf.Atan(scoringRadius * 1.3f / closeUpDistance) * Mathf.Rad2Deg;
+            closeTex = new RenderTexture(512, 512, 16);
+            closeTex.name = "Vista de cerca dardos";
+            closeCam.targetTexture = closeTex;
+            closeCam.enabled = false;
+
+            // Panel flotante: marco, imagen y la jugada.
+            var go = new GameObject("Vista de cerca", typeof(RectTransform));
+            closeCanvas = go.AddComponent<Canvas>();
+            closeCanvas.renderMode = RenderMode.WorldSpace;
+            closeCanvas.sortingOrder = 300;
+            var rt = (RectTransform)go.transform;
+            rt.sizeDelta = new Vector2(400f, 470f);
+            rt.localScale = Vector3.one * 0.001f; // 40 cm de ancho
+            var frame = UiChild<Image>(rt, "Marco", new Vector2(0f, 0f), new Vector2(400f, 470f));
+            frame.color = new Color(0.06f, 0.08f, 0.07f, 0.95f);
+            var img = UiChild<RawImage>(rt, "Imagen", new Vector2(0f, 30f), new Vector2(380f, 380f));
+            img.texture = closeTex;
+            closeCaption = UiChild<TextMeshProUGUI>(rt, "Jugada", new Vector2(0f, -195f), new Vector2(380f, 70f));
+            closeCaption.fontSize = 40;
+            closeCaption.fontStyle = FontStyles.Bold;
+            closeCaption.alignment = TextAlignmentOptions.Center;
+            closeCaption.color = new Color(1f, 0.85f, 0.4f);
+            closeCaption.richText = true;
+            foreach (var g in go.GetComponentsInChildren<Graphic>()) g.raycastTarget = false;
+            go.SetActive(false);
+        }
+
+        /// <summary>Anillo que destella donde se clavó el dardo.</summary>
+        IEnumerator HitMarker(Vector3 point)
+        {
+            var go = new GameObject("Impacto", typeof(RectTransform));
+            go.transform.SetPositionAndRotation(point + boardNormal * 0.004f, Quaternion.LookRotation(-boardNormal, Vector3.up));
+            var canvas = go.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+            var rt = (RectTransform)go.transform;
+            rt.sizeDelta = new Vector2(100f, 100f);
+            var img = UiChild<Image>(rt, "Anillo", Vector2.zero, new Vector2(100f, 100f));
+            if (ringSprite == null) ringSprite = GazeReticle.CircleSprite(0.72f);
+            img.sprite = ringSprite;
+            img.raycastTarget = false;
+            Color c = new Color(1f, 0.85f, 0.3f, 1f);
+            yield return Ease.Run(1.4f, t =>
+            {
+                rt.localScale = Vector3.one * 0.0006f * Mathf.Lerp(0.6f, 1.4f, Ease.OutCubic(t)); // 4 → 8 cm
+                img.color = new Color(c.r, c.g, c.b, 1f - t);
+            });
+            Destroy(go);
+        }
+
+        static T UiChild<T>(RectTransform parent, string name, Vector2 pos, Vector2 size) where T : Component
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            var rt = (RectTransform)go.transform;
+            rt.SetParent(parent, false);
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = size;
+            return go.AddComponent<T>();
+        }
+
+        void OnDestroy()
+        {
+            if (closeTex != null) closeTex.Release();
         }
 
         // ---------- Puntaje ----------
