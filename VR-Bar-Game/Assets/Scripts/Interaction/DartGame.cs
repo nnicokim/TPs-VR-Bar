@@ -82,6 +82,10 @@ namespace BarInteraccion
             UpdatePanel();
         }
 
+        /// <summary>La etiqueta ("Tirar") va arriba del borde del tablero y separada de la pared (si no, se corta contra ella).</summary>
+        protected override Vector3 LabelPosition =>
+            boardCenter + boardNormal * 0.15f + Vector3.up * (scoringRadius * 225.5f / 170f + 0.16f);
+
         protected override bool IsAvailable()
         {
             if (busy || darts == null || darts.Length < 3) return false;
