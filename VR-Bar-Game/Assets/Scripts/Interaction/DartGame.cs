@@ -140,6 +140,7 @@ namespace BarInteraccion
             roundScore += points;
             marks.Add(mark);
             thrown++;
+            SessionLog.Event("dardos", "tiro", $"{mark} ({points})");
             UpdatePanel();
             StartCoroutine(HitMarker(target));
             if (showCloseUp)

@@ -29,6 +29,7 @@ namespace BarInteraccion
             public string customer;
             public string drink;
             public bool done;
+            public float arrivedAt;
         }
 
         [Header("Referencias")]
@@ -39,6 +40,7 @@ namespace BarInteraccion
         public LightningStorm storm;
         public ClosingSequence closing;
         public DartGame darts;
+        public PoolGame pool;
 
         [Header("El habitué")]
         public string regularName = "Don Julio";
@@ -86,6 +88,7 @@ namespace BarInteraccion
         void Start()
         {
             customerIndex = Random.Range(0, customers.Length);
+            SessionLog.Event("sesion", "escena cargada");
             if (beerStation != null) { beerStation.DrinkServed += OnDrinkServed; beerStation.DrinkStarted += OnDrinkStarted; }
             if (shotStation != null) { shotStation.DrinkServed += OnDrinkServed; shotStation.DrinkStarted += OnDrinkStarted; }
             if (GazeTeleporter.Instance != null) GazeTeleporter.Instance.Teleported += OnTeleported;
@@ -175,11 +178,12 @@ namespace BarInteraccion
             board?.Swing(0.8f);
             board?.ShowChoice("Servirle", "Cerramos", c => choice = c);
             yield return new WaitUntil(() => choice >= 0);
+            SessionLog.Event("habitue", choice == 0 ? "servirle" : "cerramos");
 
             if (choice == 0)
             {
                 ServedRegular = true;
-                var order = new Order { customer = regularName, drink = regularDrink };
+                var order = new Order { customer = regularName, drink = regularDrink, arrivedAt = Time.time };
                 orders.Add(order);
                 regularPending = true;
                 RefreshBoard();
@@ -206,6 +210,7 @@ namespace BarInteraccion
             if (ServedRegular == true) s += $"\nLe serviste la última a {regularName}.";
             else if (ServedRegular == false) s += $"\n{regularName} se fue sin su última.";
             if (darts != null && darts.BestRound > 0) s += $"\nMejor ronda de dardos: {darts.BestRound}.";
+            if (pool != null && pool.Shots > 0) s += $"\nPool: {pool.Pocketed} {(pool.Pocketed == 1 ? "bola embocada" : "bolas embocadas")} en {pool.Shots} {(pool.Shots == 1 ? "tiro" : "tiros")}.";
             return s + "\nLa lluvia sigue.";
         }
 
@@ -213,8 +218,9 @@ namespace BarInteraccion
         {
             if (entranceSound != null) entranceSound.PlayOnce(); // la puerta se abre con su sonido (DoorSwing)
             yield return new WaitForSeconds(2.2f);                // el tiempo de llegar a la barra
-            var order = new Order { customer = customers[customerIndex++ % customers.Length], drink = drink };
+            var order = new Order { customer = customers[customerIndex++ % customers.Length], drink = drink, arrivedAt = Time.time };
             orders.Add(order);
+            SessionLog.Event("pedido", "llega", $"{order.customer}: {drink}");
             RefreshBoard();
             board?.Swing();
             if (hintsEnabled) ShowHint(drink);
@@ -235,6 +241,7 @@ namespace BarInteraccion
             {
                 order.done = true;
                 ServedOk++;
+                SessionLog.Event("pedido", "servido", $"{order.customer}: {drink} en {Time.time - order.arrivedAt:0.0} s");
                 RefreshBoard();
                 board?.ShowNote($"¡Gracias! ({order.customer})", false, 2f);
                 StartCoroutine(RemoveLater(order, 2.5f));
@@ -243,6 +250,7 @@ namespace BarInteraccion
             else
             {
                 Mistakes++;
+                SessionLog.Event("pedido", "error", $"sirvió {drink}");
                 RefreshBoard();
                 string pending = string.Join(", ", Pending.Select(o => o.drink));
                 board?.ShowNote(pending.Length > 0 ? $"Nadie pidió {drink}. Falta: {pending}" : $"Nadie pidió {drink}", true, 3.5f);
@@ -260,6 +268,7 @@ namespace BarInteraccion
         void SetAct(Act act)
         {
             CurrentAct = act;
+            SessionLog.Event("acto", act.ToString());
             switch (act)
             {
                 case Act.Apertura:

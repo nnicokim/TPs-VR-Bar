@@ -41,6 +41,7 @@ namespace BarInteraccion
             Busy = false;
             Done = true;
             Attract = false;
+            SessionLog.Event("cierre", group, name);
             Completed?.Invoke(this);
         }
 

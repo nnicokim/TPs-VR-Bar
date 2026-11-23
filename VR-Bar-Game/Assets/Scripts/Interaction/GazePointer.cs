@@ -88,22 +88,24 @@ namespace BarInteraccion
             if (current != null)
             {
                 float needed = current.DwellTime > 0f ? current.DwellTime : defaultDwellTime;
-                bool select = GazeInput.SelectPressedThisFrame();
+                bool tapped = GazeInput.SelectPressedThisFrame();
+                bool dwelled = false;
                 if (useDwell && !consumed)
                 {
                     dwell += Time.deltaTime;
                     progress = Mathf.Clamp01(dwell / needed);
-                    if (dwell >= needed) select = true;
+                    if (dwell >= needed) dwelled = true;
                 }
-                if (select) Select();
+                if (tapped || dwelled) Select(!tapped);
             }
 
             if (reticle != null) reticle.SetState(distance, current != null, progress);
         }
 
-        void Select()
+        void Select(bool byDwell)
         {
             var target = current;
+            SessionLog.Selection(target is Component comp ? comp.name : "?", byDwell);
             consumed = true; // no se vuelve a elegir por dwell hasta mirar otra cosa
             lastSelected = target;
             dwell = 0f;

@@ -8,7 +8,9 @@ interacción para Cardboard (mirada + un toque) y la primera acción completa: *
 
 Las etapas 1, 2 y 3 están armadas y guardadas en `SampleScene`: alcanza con abrir la escena y dar Play.
 Cada etapa se armó con un menú temporal de Editor (*VR Bar → Armar Etapa N*) que se corrió una vez y se borró;
-quedan en el historial de git por si hiciera falta rearmar algo.
+quedan en el historial de git por si hiciera falta rearmar algo. La etapa 4 (pool) se arma igual: ver al final.
+
+Para probar en el celular ver `PRUEBA_CARDBOARD.md`; para el video y el informe, `ENTREGA.md`.
 
 ## Cómo probar (etapa 1)
 
@@ -183,7 +185,70 @@ Durante toda la noche: la puerta de la cocina se abre cuando suena; al abrirse l
 | **Flow** | Descompresión después de la hora pico: tareas simples, sin tiempo, con feedback fuerte (oscuridad que avanza, silencio que crece). Los dardos son un desafío opcional con puntaje y "mejor ronda". |
 | **Animación** | Parpadeo del neón, cortinas que se despliegan, teclas, oscuridad por escalones, último relámpago, vuelo y temblor del dardo, golpes al arcade, cartel que cae con rebote, tubo que se prende, Pong. |
 
-## Próxima etapa
+---
 
-4. Pool (tiro de exhibición con física), prueba en Cardboard (rendimiento, tamaños, dwell) con personas que no conozcan
-   el proyecto, video y entrega.
+# Etapa 4: pool con física, registro de sesión y prueba en Cardboard
+
+## Cómo armarla (una sola vez)
+
+1. Abrir `SampleScene` y esperar a que compile.
+2. Menú **VR Bar → Armar Etapa 4 (pool)**. La Consola muestra un resumen (medidas de la mesa, bolas, taco, sonido).
+3. Guardar la escena (Ctrl+S). No hace falta rehornear.
+4. Probar, commitear la escena y borrar `Assets/Scripts/Editor/SetupEtapa4.cs` (y la carpeta `Editor`, que queda vacía).
+
+Se puede correr de nuevo: deshace lo que armó antes y vuelve a medir el modelo.
+
+## Cómo probar
+
+- Ir al aro **Pool**. La bola blanca se contornea al mirar la mesa (*Jugar al pool*).
+- Elegir la mesa (mirar fijo o tocar) → **modo apuntar**: el taco se apoya detrás de la blanca y "respira", una línea
+  punteada sale de la blanca hacia donde se mira y un anillo en el paño marca el punto. **Mirar más lejos de la blanca es
+  tirar más fuerte** (la etiqueta dice *Tirar · 15–100 %*).
+- **Tiro:** quedarse quieto mirando el punto hasta que el anillo se llena (1,6 s) o tocar la pantalla. El taco retrocede,
+  pega y la blanca sale. Bolas, bandas y troneras son física real (PhysX): choques, rebotes y frenado por el paño.
+- Mirar fuera de la mesa 1,5 s cancela el tiro y el taco vuelve a su lugar.
+- Bola embocada: cae en la tronera con su sonido. Si se emboca la blanca, vuelve a su lugar de salida.
+- **[ Rearmar mesa ]** (cartel sobre la banda del lado del aro) vuelve a armar el triángulo.
+- Los tiros y las bolas embocadas aparecen en la tarjeta final.
+
+## Qué agrega a la escena
+
+| Dónde | Qué |
+|---|---|
+| `[Etapa4] Pool (juego)` | `PoolGame` en el centro de la mesa, con el paño (collider), 6 bandas con los huecos de las troneras, bordes de seguridad y 6 troneras (`PoolPocket`, triggers). |
+| `[Etapa4] Pool (juego)/Bola …` | 16 bolas físicas (`PoolBall`: `Rigidbody` + `SphereCollider`) con la malla y el material de las originales. |
+| `[Etapa4] Pool (juego)/[Etapa4] Taco` | El taco que se usa para tirar (copia del que estaba sobre la mesa). |
+| `[Etapa4] Pool (juego)/[Etapa4] Rearmar mesa` | `PoolResetButton`. |
+| `pool_table_scene` | Las bolas y el taco originales quedan **desactivados**: la mesa está estirada en altura (escala Y 1,3), así que eran óvalos y no sirven para física. |
+| `Assets/Materials/Interaccion/Pool *.physicMaterial` | Paño (frena), banda (rebota 0,78) y bola (rebota 0,93, casi sin roce). |
+| Fuente `Pool` (sonido) | `automatic = false`: ya no suena sola; toca F1 en la apertura, F2 en cada choque y F3 en la tronera, desde donde pasa. |
+| `Pedidos y actos` | Referencia al pool (para el resumen). |
+
+## Scripts nuevos
+
+| Script | Qué hace |
+|---|---|
+| `PoolGame` | Apuntar con la mirada (dirección y fuerza), dwell propio para el tiro, animación del taco, espera a que todo se quede quieto, reposición de la blanca, sonidos por choque. Ajusta `Physics.bounceThreshold` y el paso fijo (10 ms) para bolas chicas. |
+| `PoolBall`, `PoolPocket`, `PoolResetButton` | Bola física (caer en la tronera, reponerse), tronera y cartel para rearmar. |
+| `SessionLog` | Registro de la sesión en CSV para la prueba con personas (ver abajo). |
+| `BarSound` (cambio) | `PlaySpecific(clip, posición, volumen)`: toca un clip puntual en un lugar. |
+| Varios (cambios) | `GazePointer`, `GazeTeleporter`, `OrderManager`, `ClosingTask`, `DartGame`, `ArcadeSecret` y `EndCard` anotan eventos en el registro. |
+
+## Registro de sesión (para la prueba)
+
+Cada sesión escribe `sesion_AAAAMMDD_HHMMSS.csv` en `Application.persistentDataPath/sesiones`
+(en el Editor de Windows: `%USERPROFILE%\AppData\LocalLow\DefaultCompany\VR-Bar-Game\sesiones`; en Android:
+`/sdcard/Android/data/<id de la app>/files/sesiones`). Columnas: `tiempo_s;categoria;evento;detalle`.
+Anota: cada elección (por mirada o por toque), teletransportes, pedidos (llegada, servido con los segundos que tardó,
+errores), actos, el habitué, tareas del cierre, dardos, golpes al arcade, tiros y embocadas del pool, y el final.
+Con eso salen las métricas de `PRUEBA_CARDBOARD.md` sin cronometrar a mano.
+
+## Qué cubre de la consigna (etapa 4)
+
+| Eje | Dónde está |
+|---|---|
+| **Significado** | El pool es el "después del turno": un momento propio del barman en su bar vacío o entre pedidos. Queda en el resumen de la noche. |
+| **Patrones** | Apuntar con la cabeza + dwell (la mirada es el taco); la distancia de la mirada es la fuerza (un solo canal de entrada, dos parámetros); cancelar mirando afuera; reinicio diegético. |
+| **Ofrecimientos** | La blanca contorneada dice "por acá se empieza"; la línea y el anillo muestran adónde va el tiro antes de tirar; el anillo que se llena anticipa el disparo (y da tiempo a arrepentirse). |
+| **Flow** | Desafío abierto y sin fin: la habilidad (apuntar y medir la fuerza) mejora tiro a tiro; feedback inmediato (sonido de cada choque, bola que cae). Sin puntaje que presione. |
+| **Animación** | Física de bolas, taco que respira, retrocede y pega, bola que cae en la tronera, blanca que reaparece. |
