@@ -47,6 +47,11 @@ namespace BarInteraccion
         public bool showCloseUp = true;
         public float closeUpSeconds = 3f;
 
+        [Tooltip("Color de los dardos anteriores en la vista de cerca (no existe en el tablero: contrasta).")]
+        public Color dartColor = new Color(0f, 0.9f, 1f, 1f);      // cian
+        [Tooltip("Color del último dardo (late).")]
+        public Color lastDartColor = new Color(1f, 0.15f, 0.85f, 1f); // magenta
+
         [Header("Pizarrita")]
         public Vector3 scorePanelPosition;
         public Material panelMaterial;
@@ -227,10 +232,10 @@ namespace BarInteraccion
             Vector3 full = Vector3.one * 0.001f;
             yield return Ease.Run(0.25f, t => panel.localScale = full * Mathf.Lerp(0.6f, 1f, Ease.OutBack(t)));
             // El último dardo late.
-            Image last = hitDots.Count > 0 && roundHits.Count > 0 ? hitDots[roundHits.Count - 1] : null;
+            Transform last = hitDots.Count > 0 && roundHits.Count > 0 ? hitDots[roundHits.Count - 1].transform.parent : null;
             yield return Ease.Run(closeUpSeconds, t =>
             {
-                if (last != null) last.rectTransform.localScale = Vector3.one * (1f + 0.35f * Mathf.Abs(Mathf.Sin(t * closeUpSeconds * 5f)));
+                if (last != null) last.localScale = Vector3.one * 1.25f * (1f + 0.3f * Mathf.Abs(Mathf.Sin(t * closeUpSeconds * 5f)));
             });
             yield return Ease.Run(0.2f, t => panel.localScale = full * Mathf.Lerp(1f, 0.6f, t));
             closeCanvas.gameObject.SetActive(false);
@@ -264,10 +269,14 @@ namespace BarInteraccion
             }
             for (int i = 0; i < 3; i++)
             {
-                var dot = UiChild<Image>(diagram, $"Dardo {i + 1}", Vector2.zero, new Vector2(14f, 14f));
-                dot.sprite = RingSprite(0f);
-                dot.gameObject.SetActive(false);
-                hitDots.Add(dot);
+                // Punto de color con borde negro: se lee sobre los sectores claros y sobre los oscuros.
+                var border = UiChild<Image>(diagram, $"Dardo {i + 1}", Vector2.zero, new Vector2(22f, 22f));
+                border.sprite = RingSprite(0f);
+                border.color = Color.black;
+                var fill = UiChild<Image>(border.rectTransform, "Color", Vector2.zero, new Vector2(15f, 15f));
+                fill.sprite = RingSprite(0f);
+                border.gameObject.SetActive(false);
+                hitDots.Add(fill);
             }
 
             closeCaption = UiChild<TextMeshProUGUI>(rt, "Jugada", new Vector2(0f, -195f), new Vector2(380f, 70f));
@@ -286,16 +295,17 @@ namespace BarInteraccion
         {
             for (int i = 0; i < hitDots.Count; i++)
             {
+                var dot = (RectTransform)hitDots[i].transform.parent; // el borde negro lleva la posición
                 bool on = i < roundHits.Count;
-                hitDots[i].gameObject.SetActive(on);
+                dot.gameObject.SetActive(on);
                 if (!on) continue;
                 Vector2 mm = roundHits[i];
                 if (mm.magnitude > 200f) mm = mm.normalized * 200f; // afuera: en el borde
-                hitDots[i].rectTransform.anchoredPosition = mm * MmToPx;
-                hitDots[i].rectTransform.localScale = Vector3.one;
+                dot.anchoredPosition = mm * MmToPx;
                 bool last = i == roundHits.Count - 1;
-                hitDots[i].color = last ? new Color(1f, 0.85f, 0.2f) : new Color(1f, 1f, 1f, 0.9f);
-                hitDots[i].transform.SetAsLastSibling();
+                dot.localScale = Vector3.one * (last ? 1.25f : 1f);
+                hitDots[i].color = last ? lastDartColor : dartColor;
+                dot.SetAsLastSibling();
             }
         }
 
@@ -365,7 +375,7 @@ namespace BarInteraccion
             var img = UiChild<Image>(rt, "Anillo", Vector2.zero, new Vector2(100f, 100f));
             img.sprite = RingSprite(0.72f);
             img.raycastTarget = false;
-            Color c = new Color(1f, 0.85f, 0.3f, 1f);
+            Color c = lastDartColor;
             yield return Ease.Run(1.4f, t =>
             {
                 rt.localScale = Vector3.one * 0.0006f * Mathf.Lerp(0.6f, 1.4f, Ease.OutCubic(t)); // 4 → 8 cm
