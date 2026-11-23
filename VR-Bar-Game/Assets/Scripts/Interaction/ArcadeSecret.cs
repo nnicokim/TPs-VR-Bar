@@ -139,8 +139,8 @@ namespace BarInteraccion
 
         public static ArcadeScreen Create(Transform parent, Vector3 center, Vector3 normal, Vector2 meters)
         {
+            // Sin padre: el modelo del arcade puede traer escala interna (FBX) y la pantalla la heredaría.
             var go = new GameObject("Pantalla arcade", typeof(RectTransform));
-            go.transform.SetParent(parent, true);
             // Mira hacia el salón y respeta la inclinación de la pantalla.
             go.transform.SetPositionAndRotation(center, Quaternion.LookRotation(-normal, Vector3.ProjectOnPlane(Vector3.up, normal)));
             var canvas = go.AddComponent<Canvas>();

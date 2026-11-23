@@ -67,6 +67,11 @@ namespace BarInteraccion
             UpdateLabel();
         }
 
+        protected virtual void OnDestroy()
+        {
+            if (labelText != null) Destroy(labelText.gameObject);
+        }
+
         protected virtual void OnDisable()
         {
             IsGazed = false;
@@ -167,9 +172,10 @@ namespace BarInteraccion
 
         void BuildLabel()
         {
-            var go = new GameObject("__etiqueta");
+            // Sin padre: muchos modelos (FBX de Blender) traen escala x100 o x0,01 y la etiqueta la heredaría
+            // (gigante o microscópica). Igual se ubica y orienta en el mundo en cada frame.
+            var go = new GameObject($"__etiqueta ({name})");
             go.AddComponent<NoGazeOutline>();
-            go.transform.SetParent(transform, false);
             labelText = go.AddComponent<TextMeshPro>();
             labelText.text = label;
             labelText.alignment = TextAlignmentOptions.Center;
