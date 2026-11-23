@@ -58,7 +58,7 @@ namespace BarInteraccion
             Vector3 facing = tagFacing; facing.y = 0f;
             if (facing.sqrMagnitude < 1e-6f) facing = Vector3.right;
             facing.Normalize();
-            Vector3 pos = tagPosition != Vector3.zero ? tagPosition : RestPosition + facing * 0.12f + Vector3.down * 0.02f;
+            Vector3 pos = tagPosition != Vector3.zero ? tagPosition : FindShelfEdge(facing);
 
             var root = new GameObject($"Cartel {drinkName}");
             root.transform.SetParent(transform.parent, false); // no cuelga de la botella: se queda en el estante
@@ -71,6 +71,15 @@ namespace BarInteraccion
             card.transform.localScale = new Vector3(tagSize.x, tagSize.y, 0.004f);
             var r = card.GetComponent<Renderer>();
             if (tagMaterial != null) r.sharedMaterial = tagMaterial;
+            else
+            {
+                // Sin material asignado: tarjeta oscura igual (si no, queda blanca y el texto claro no se lee).
+                var block = new MaterialPropertyBlock();
+                var dark = new Color(0.09f, 0.13f, 0.11f, 1f);
+                block.SetColor("_BaseColor", dark);
+                block.SetColor("_Color", dark);
+                r.SetPropertyBlock(block);
+            }
             r.shadowCastingMode = ShadowCastingMode.Off;
             var col = card.GetComponent<BoxCollider>();
             if (col != null) col.isTrigger = true;
@@ -107,6 +116,18 @@ namespace BarInteraccion
         }
 
         public Vector3 TipPosition => transform.position + transform.rotation * TipOffset;
+
+        /// <summary>Borde frontal del estante que está debajo de la botella (si no lo encuentra, un poco adelante y abajo).</summary>
+        Vector3 FindShelfEdge(Vector3 facing)
+        {
+            Vector3 fallback = RestPosition + facing * 0.12f + Vector3.down * 0.02f;
+            if (!Physics.Raycast(RestPosition + Vector3.up * 0.03f, Vector3.down, out RaycastHit hit, 0.2f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                return fallback;
+            Bounds sb = hit.collider.bounds;
+            float edge = Vector3.Dot(sb.center, facing) + Mathf.Abs(Vector3.Dot(sb.extents, facing));
+            Vector3 onEdge = RestPosition + facing * (edge - Vector3.Dot(RestPosition, facing) + 0.004f);
+            return new Vector3(onEdge.x, sb.center.y - 0.006f, onEdge.z);
+        }
 
         Bounds WorldBounds()
         {
