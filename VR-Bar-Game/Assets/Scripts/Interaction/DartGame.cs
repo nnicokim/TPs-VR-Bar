@@ -14,8 +14,10 @@ namespace BarInteraccion
     /// alternando azules y rojos. El puntaje sigue el tablero reglamentario (sectores, doble, triple, bull)
     /// y se anota en una pizarrita al lado. Después de 3 tiros, mirar el tablero de nuevo junta los dardos.
     /// Solo se puede tirar de cerca (desde el punto "Dardos").
-    /// Como desde 2,4 m un dardo clavado casi no se ve, después de cada tiro aparece una vista de cerca
-    /// (una cámara junto al tablero, como en las transmisiones de dardos) con la jugada, y un anillo marca el impacto.
+    /// Como desde 2,4 m un dardo clavado casi no se ve, después de cada tiro aparece una vista de cerca:
+    /// un diagrama del tablero (dibujado por código, como en las transmisiones) con los dardos de la ronda,
+    /// el último destacado, y la jugada. Además un anillo destella en el impacto.
+    /// (Sin segunda cámara: en URP + XR una cámara extra a textura ensucia el render del visor y es cara en celular.)
     /// </summary>
     public class DartGame : GazeInteractable
     {
@@ -43,9 +45,7 @@ namespace BarInteraccion
 
         [Header("Vista de cerca")]
         public bool showCloseUp = true;
-        public float closeUpSeconds = 2.8f;
-        [Tooltip("Distancia de la cámara de cerca al tablero (m).")]
-        public float closeUpDistance = 0.55f;
+        public float closeUpSeconds = 3f;
 
         [Header("Pizarrita")]
         public Vector3 scorePanelPosition;
@@ -61,12 +61,14 @@ namespace BarInteraccion
         readonly List<string> marks = new List<string>();
         bool busy;
         TextMeshPro panelText;
-        Camera closeCam;
-        RenderTexture closeTex;
         Canvas closeCanvas;
+        RectTransform diagram;
+        readonly List<Vector2> roundHits = new List<Vector2>(); // posiciones de la ronda en "mm" de tablero
+        readonly List<Image> hitDots = new List<Image>();
+        static Texture2D boardTexture;
         TextMeshProUGUI closeCaption;
         Coroutine closeRoutine;
-        static Sprite ringSprite;
+        static Sprite ringSprite, dotSprite;
 
         void Awake()
         {
@@ -125,6 +127,7 @@ namespace BarInteraccion
 
             if (hitSound != null) hitSound.PlayOnceAt(target);
             int points = Score(target, out string mark);
+            roundHits.Add(BoardMm(target));
             roundScore += points;
             marks.Add(mark);
             thrown++;
@@ -165,6 +168,7 @@ namespace BarInteraccion
             thrown = 0;
             roundScore = 0;
             marks.Clear();
+            roundHits.Clear();
             round++;
             label = "Tirar";
             UpdatePanel();
@@ -201,7 +205,7 @@ namespace BarInteraccion
 
         IEnumerator CloseUp(string caption)
         {
-            if (closeCam == null) BuildCloseUp();
+            if (closeCanvas == null) BuildCloseUp();
             Transform cam = GazePointer.Instance != null ? GazePointer.Instance.transform : null;
             if (cam == null) yield break;
 
@@ -212,47 +216,56 @@ namespace BarInteraccion
             Vector3 pos = cam.position + toBoard * 0.5f + side * 0.45f + Vector3.up * 0.05f;
             closeCanvas.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(pos - cam.position, Vector3.up));
             closeCaption.text = caption;
+            UpdateDots();
 
-            closeCam.enabled = true;
             closeCanvas.gameObject.SetActive(true);
             Transform panel = closeCanvas.transform;
             Vector3 full = Vector3.one * 0.001f;
             yield return Ease.Run(0.25f, t => panel.localScale = full * Mathf.Lerp(0.6f, 1f, Ease.OutBack(t)));
-            yield return new WaitForSeconds(closeUpSeconds);
+            // El último dardo late.
+            Image last = hitDots.Count > 0 && roundHits.Count > 0 ? hitDots[roundHits.Count - 1] : null;
+            yield return Ease.Run(closeUpSeconds, t =>
+            {
+                if (last != null) last.rectTransform.localScale = Vector3.one * (1f + 0.35f * Mathf.Abs(Mathf.Sin(t * closeUpSeconds * 5f)));
+            });
             yield return Ease.Run(0.2f, t => panel.localScale = full * Mathf.Lerp(1f, 0.6f, t));
             closeCanvas.gameObject.SetActive(false);
-            closeCam.enabled = false; // solo renderiza mientras se ve
             closeRoutine = null;
         }
 
         void BuildCloseUp()
         {
-            // Cámara mirando el tablero de frente, encuadrando la zona de puntaje.
-            var camGo = new GameObject("Camara de cerca (dardos)");
-            camGo.transform.SetParent(transform.parent, true);
-            camGo.transform.SetPositionAndRotation(boardCenter + boardNormal * closeUpDistance, Quaternion.LookRotation(-boardNormal, Vector3.up));
-            closeCam = camGo.AddComponent<Camera>();
-            closeCam.stereoTargetEye = StereoTargetEyeMask.None; // no es la cámara del visor
-            closeCam.nearClipPlane = 0.05f;
-            closeCam.farClipPlane = closeUpDistance + 1f;
-            closeCam.fieldOfView = 2f * Mathf.Atan(scoringRadius * 1.3f / closeUpDistance) * Mathf.Rad2Deg;
-            closeTex = new RenderTexture(512, 512, 16);
-            closeTex.name = "Vista de cerca dardos";
-            closeCam.targetTexture = closeTex;
-            closeCam.enabled = false;
-
-            // Panel flotante: marco, imagen y la jugada.
-            var go = new GameObject("Vista de cerca", typeof(RectTransform));
+            var go = new GameObject("Vista de cerca (dardos)", typeof(RectTransform));
             closeCanvas = go.AddComponent<Canvas>();
             closeCanvas.renderMode = RenderMode.WorldSpace;
             closeCanvas.sortingOrder = 300;
             var rt = (RectTransform)go.transform;
             rt.sizeDelta = new Vector2(400f, 470f);
             rt.localScale = Vector3.one * 0.001f; // 40 cm de ancho
-            var frame = UiChild<Image>(rt, "Marco", new Vector2(0f, 0f), new Vector2(400f, 470f));
+            var frame = UiChild<Image>(rt, "Marco", Vector2.zero, new Vector2(400f, 470f));
             frame.color = new Color(0.06f, 0.08f, 0.07f, 0.95f);
-            var img = UiChild<RawImage>(rt, "Imagen", new Vector2(0f, 30f), new Vector2(380f, 380f));
-            img.texture = closeTex;
+
+            // Diagrama del tablero: 380 px = 2 x 205 "mm" (hasta los números).
+            var img = UiChild<RawImage>(rt, "Tablero", new Vector2(0f, 30f), new Vector2(380f, 380f));
+            if (boardTexture == null) boardTexture = BoardTexture(256);
+            img.texture = boardTexture;
+            diagram = img.rectTransform;
+            for (int i = 0; i < 20; i++)
+            {
+                float ang = (90f - i * 18f) * Mathf.Deg2Rad;
+                var num = UiChild<TextMeshProUGUI>(diagram, $"N{Numbers[i]}", new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * 188f * MmToPx, new Vector2(40f, 24f));
+                num.text = Numbers[i].ToString();
+                num.fontSize = 16; num.alignment = TextAlignmentOptions.Center;
+                num.color = new Color(0.95f, 0.93f, 0.85f);
+            }
+            for (int i = 0; i < 3; i++)
+            {
+                var dot = UiChild<Image>(diagram, $"Dardo {i + 1}", Vector2.zero, new Vector2(14f, 14f));
+                dot.sprite = RingSprite(0f);
+                dot.gameObject.SetActive(false);
+                hitDots.Add(dot);
+            }
+
             closeCaption = UiChild<TextMeshProUGUI>(rt, "Jugada", new Vector2(0f, -195f), new Vector2(380f, 70f));
             closeCaption.fontSize = 40;
             closeCaption.fontStyle = FontStyles.Bold;
@@ -261,6 +274,79 @@ namespace BarInteraccion
             closeCaption.richText = true;
             foreach (var g in go.GetComponentsInChildren<Graphic>()) g.raycastTarget = false;
             go.SetActive(false);
+        }
+
+        const float MmToPx = 190f / 205f;
+
+        void UpdateDots()
+        {
+            for (int i = 0; i < hitDots.Count; i++)
+            {
+                bool on = i < roundHits.Count;
+                hitDots[i].gameObject.SetActive(on);
+                if (!on) continue;
+                Vector2 mm = roundHits[i];
+                if (mm.magnitude > 200f) mm = mm.normalized * 200f; // afuera: en el borde
+                hitDots[i].rectTransform.anchoredPosition = mm * MmToPx;
+                hitDots[i].rectTransform.localScale = Vector3.one;
+                bool last = i == roundHits.Count - 1;
+                hitDots[i].color = last ? new Color(1f, 0.85f, 0.2f) : new Color(1f, 1f, 1f, 0.9f);
+                hitDots[i].transform.SetAsLastSibling();
+            }
+        }
+
+        /// <summary>Posición del impacto en "mm" de un tablero reglamentario, con el 20 arriba.</summary>
+        Vector2 BoardMm(Vector3 p)
+        {
+            Vector3 n = boardNormal;
+            Vector3 d = p - boardCenter; d -= n * Vector3.Dot(d, n);
+            Vector3 up = Vector3.ProjectOnPlane(Vector3.up, n).normalized;
+            Vector3 right = Vector3.Cross(Vector3.up, -n).normalized;
+            float k = 170f / Mathf.Max(0.01f, scoringRadius);
+            Vector2 v = new Vector2(Vector3.Dot(d, right), Vector3.Dot(d, up)) * k;
+            float a = -rotationOffset * Mathf.Deg2Rad; // mismo giro que el puntaje
+            return new Vector2(v.x * Mathf.Cos(a) - v.y * Mathf.Sin(a), v.x * Mathf.Sin(a) + v.y * Mathf.Cos(a));
+        }
+
+        /// <summary>Tablero reglamentario dibujado en una textura (sectores, triple, doble, 25 y bull).</summary>
+        static Texture2D BoardTexture(int size)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.wrapMode = TextureWrapMode.Clamp;
+            var px = new Color32[size * size];
+            Color32 black = new Color32(25, 25, 25, 255), cream = new Color32(235, 220, 180, 255);
+            Color32 red = new Color32(200, 40, 40, 255), green = new Color32(30, 140, 60, 255), clear = new Color32(0, 0, 0, 0);
+            Color32 wire = new Color32(170, 170, 170, 255);
+            float half = size * 0.5f;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = (x + 0.5f - half) / half * 205f, dy = (y + 0.5f - half) / half * 205f;
+                    float r = Mathf.Sqrt(dx * dx + dy * dy);
+                    Color32 c;
+                    if (r > 170f) c = r < 172f ? wire : clear;
+                    else if (r <= 6.35f) c = red;
+                    else if (r <= 15.9f) c = green;
+                    else
+                    {
+                        float ang = Mathf.Atan2(dy, dx) * Mathf.Rad2Deg;
+                        int idx = (int)(Mathf.Repeat(90f - ang + 9f, 360f) / 18f) % 20;
+                        bool even = idx % 2 == 0;
+                        bool ring = (r >= 99f && r <= 107f) || r >= 162f;
+                        c = ring ? (even ? red : green) : (even ? black : cream);
+                    }
+                    px[y * size + x] = c;
+                }
+            tex.SetPixels32(px);
+            tex.Apply(false, true);
+            return tex;
+        }
+
+        static Sprite RingSprite(float inner)
+        {
+            if (inner <= 0f) { if (dotSprite == null) dotSprite = GazeReticle.CircleSprite(0f); return dotSprite; }
+            if (ringSprite == null) ringSprite = GazeReticle.CircleSprite(inner);
+            return ringSprite;
         }
 
         /// <summary>Anillo que destella donde se clavó el dardo.</summary>
@@ -273,8 +359,7 @@ namespace BarInteraccion
             var rt = (RectTransform)go.transform;
             rt.sizeDelta = new Vector2(100f, 100f);
             var img = UiChild<Image>(rt, "Anillo", Vector2.zero, new Vector2(100f, 100f));
-            if (ringSprite == null) ringSprite = GazeReticle.CircleSprite(0.72f);
-            img.sprite = ringSprite;
+            img.sprite = RingSprite(0.72f);
             img.raycastTarget = false;
             Color c = new Color(1f, 0.85f, 0.3f, 1f);
             yield return Ease.Run(1.4f, t =>
@@ -293,11 +378,6 @@ namespace BarInteraccion
             rt.anchoredPosition = pos;
             rt.sizeDelta = size;
             return go.AddComponent<T>();
-        }
-
-        void OnDestroy()
-        {
-            if (closeTex != null) closeTex.Release();
         }
 
         // ---------- Puntaje ----------
