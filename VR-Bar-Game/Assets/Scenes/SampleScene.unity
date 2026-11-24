@@ -507,7 +507,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 35348707}
-  - component: {fileID: 35348709}
   - component: {fileID: 35348708}
   m_Layer: 0
   m_Name: Tronera 2
@@ -543,28 +542,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6bbccff8e15339c40bd40a716c515542, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolPocket
-  game: {fileID: 1970319805}
---- !u!135 &35348709
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 35348706}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.065
-  m_Center: {x: 0, y: 0, z: 0}
+  captureRadius: 0.065
 --- !u!1 &38712186
 GameObject:
   m_ObjectHideFlags: 0
@@ -3009,8 +2987,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be0da0bd190a2444f995a0bf2d49658e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolBall
-  isCue: 0
-  radius: 0.028421711
+  number: 12
   game: {fileID: 1970319805}
 --- !u!135 &168886123
 SphereCollider:
@@ -3873,8 +3850,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be0da0bd190a2444f995a0bf2d49658e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolBall
-  isCue: 0
-  radius: 0.028421711
+  number: 7
   game: {fileID: 1970319805}
 --- !u!135 &186526376
 SphereCollider:
@@ -7314,7 +7290,7 @@ Transform:
   m_GameObject: {fileID: 347313870}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.5723007, y: 1.0195498, z: -0.5902782}
+  m_LocalPosition: {x: 0.5723007, y: 1.0195498, z: -0.59528068}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -8203,8 +8179,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be0da0bd190a2444f995a0bf2d49658e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolBall
-  isCue: 0
-  radius: 0.028421711
+  number: 11
   game: {fileID: 1970319805}
 --- !u!135 &394979112
 SphereCollider:
@@ -10125,7 +10100,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 504775016}
-  - component: {fileID: 504775018}
   - component: {fileID: 504775017}
   m_Layer: 0
   m_Name: Tronera 4
@@ -10161,28 +10135,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6bbccff8e15339c40bd40a716c515542, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolPocket
-  game: {fileID: 1970319805}
---- !u!135 &504775018
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 504775015}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.065
-  m_Center: {x: 0, y: 0, z: 0}
+  captureRadius: 0.065
 --- !u!1 &506744486
 GameObject:
   m_ObjectHideFlags: 0
@@ -10359,8 +10312,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be0da0bd190a2444f995a0bf2d49658e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolBall
-  isCue: 0
-  radius: 0.028421711
+  number: 3
   game: {fileID: 1970319805}
 --- !u!135 &516704204
 SphereCollider:
@@ -13944,7 +13896,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 672869741}
-  - component: {fileID: 672869743}
   - component: {fileID: 672869742}
   m_Layer: 0
   m_Name: Tronera 5
@@ -13980,28 +13931,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6bbccff8e15339c40bd40a716c515542, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolPocket
-  game: {fileID: 1970319805}
---- !u!135 &672869743
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 672869740}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.055
-  m_Center: {x: 0, y: 0, z: 0}
+  captureRadius: 0.055
 --- !u!1 &676028601
 GameObject:
   m_ObjectHideFlags: 0
@@ -15852,7 +15782,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 789293278}
-  - component: {fileID: 789293280}
   - component: {fileID: 789293279}
   m_Layer: 0
   m_Name: Tronera 6
@@ -15888,28 +15817,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6bbccff8e15339c40bd40a716c515542, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolPocket
-  game: {fileID: 1970319805}
---- !u!135 &789293280
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 789293277}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.055
-  m_Center: {x: 0, y: 0, z: 0}
+  captureRadius: 0.055
 --- !u!1001 &792186444
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -22308,8 +22216,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be0da0bd190a2444f995a0bf2d49658e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolBall
-  isCue: 0
-  radius: 0.028421711
+  number: 6
   game: {fileID: 1970319805}
 --- !u!135 &1154663570
 SphereCollider:
@@ -25410,8 +25317,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be0da0bd190a2444f995a0bf2d49658e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolBall
-  isCue: 0
-  radius: 0.028421711
+  number: 1
   game: {fileID: 1970319805}
 --- !u!135 &1272842037
 SphereCollider:
@@ -26443,8 +26349,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be0da0bd190a2444f995a0bf2d49658e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolBall
-  isCue: 1
-  radius: 0.028421711
+  number: 0
   game: {fileID: 1970319805}
 --- !u!135 &1323909081
 SphereCollider:
@@ -27905,8 +27810,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be0da0bd190a2444f995a0bf2d49658e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolBall
-  isCue: 0
-  radius: 0.028421711
+  number: 8
   game: {fileID: 1970319805}
 --- !u!135 &1354676613
 SphereCollider:
@@ -29585,7 +29489,7 @@ Transform:
   m_GameObject: {fileID: 1426216274}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.1996013, y: 1.0195498, z: 0}
+  m_LocalPosition: {x: 1.15461663, y: 1.0195498, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -30974,8 +30878,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be0da0bd190a2444f995a0bf2d49658e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolBall
-  isCue: 0
-  radius: 0.028421711
+  number: 13
   game: {fileID: 1970319805}
 --- !u!135 &1505162456
 SphereCollider:
@@ -31946,7 +31849,7 @@ Transform:
   m_GameObject: {fileID: 1538772902}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.1996013, y: 1.0195498, z: 0}
+  m_LocalPosition: {x: -1.15461663, y: 1.0195498, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -33538,7 +33441,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1617234391
 Transform:
   m_ObjectHideFlags: 0
@@ -37317,8 +37220,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be0da0bd190a2444f995a0bf2d49658e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolBall
-  isCue: 0
-  radius: 0.028421711
+  number: 15
   game: {fileID: 1970319805}
 --- !u!135 &1738660039
 SphereCollider:
@@ -37773,8 +37675,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be0da0bd190a2444f995a0bf2d49658e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolBall
-  isCue: 0
-  radius: 0.028421711
+  number: 2
   game: {fileID: 1970319805}
 --- !u!135 &1765111887
 SphereCollider:
@@ -37923,7 +37824,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 2147483647
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1780853605
 Transform:
   m_ObjectHideFlags: 0
@@ -38789,7 +38690,7 @@ Transform:
   m_GameObject: {fileID: 1831750301}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.5723007, y: 1.0195498, z: -0.5902782}
+  m_LocalPosition: {x: -0.5723007, y: 1.0195498, z: -0.59528068}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -39175,8 +39076,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be0da0bd190a2444f995a0bf2d49658e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolBall
-  isCue: 0
-  radius: 0.028421711
+  number: 4
   game: {fileID: 1970319805}
 --- !u!135 &1846527917
 SphereCollider:
@@ -40203,8 +40103,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be0da0bd190a2444f995a0bf2d49658e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolBall
-  isCue: 0
-  radius: 0.028421711
+  number: 9
   game: {fileID: 1970319805}
 --- !u!135 &1879035212
 SphereCollider:
@@ -40391,7 +40290,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1889825644}
-  - component: {fileID: 1889825646}
   - component: {fileID: 1889825645}
   m_Layer: 0
   m_Name: Tronera 3
@@ -40427,28 +40325,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6bbccff8e15339c40bd40a716c515542, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolPocket
-  game: {fileID: 1970319805}
---- !u!135 &1889825646
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1889825643}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.065
-  m_Center: {x: 0, y: 0, z: 0}
+  captureRadius: 0.065
 --- !u!1 &1894545068 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -6689036041284674117, guid: 5295e81863e6e416dab5b5bbfbce8b5c, type: 3}
@@ -41083,7 +40960,7 @@ Transform:
   m_GameObject: {fileID: 1925685639}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.5723007, y: 1.0195498, z: 0.5902782}
+  m_LocalPosition: {x: -0.5723007, y: 1.0195498, z: 0.59528068}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -41119,7 +40996,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1931107713}
-  - component: {fileID: 1931107715}
   - component: {fileID: 1931107714}
   m_Layer: 0
   m_Name: Tronera 1
@@ -41155,28 +41031,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6bbccff8e15339c40bd40a716c515542, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolPocket
-  game: {fileID: 1970319805}
---- !u!135 &1931107715
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1931107712}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.065
-  m_Center: {x: 0, y: 0, z: 0}
+  captureRadius: 0.065
 --- !u!1 &1933626964
 GameObject:
   m_ObjectHideFlags: 0
@@ -41208,8 +41063,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be0da0bd190a2444f995a0bf2d49658e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolBall
-  isCue: 0
-  radius: 0.028421711
+  number: 10
   game: {fileID: 1970319805}
 --- !u!135 &1933626966
 SphereCollider:
@@ -41391,7 +41245,7 @@ Transform:
   m_GameObject: {fileID: 1951790127}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.5723007, y: 1.0195498, z: 0.5902782}
+  m_LocalPosition: {x: 0.5723007, y: 1.0195498, z: 0.59528068}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -41515,8 +41369,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be0da0bd190a2444f995a0bf2d49658e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolBall
-  isCue: 0
-  radius: 0.028421711
+  number: 5
   game: {fileID: 1970319805}
 --- !u!135 &1966812886
 SphereCollider:
@@ -42627,8 +42480,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be0da0bd190a2444f995a0bf2d49658e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BarInteraccion.PoolBall
-  isCue: 0
-  radius: 0.028421711
+  number: 14
   game: {fileID: 1970319805}
 --- !u!135 &2019293314
 SphereCollider:

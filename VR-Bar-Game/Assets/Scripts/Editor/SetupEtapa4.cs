@@ -21,8 +21,9 @@ namespace BarInteraccion.EditorTools
         const string TablePath = "Assets/Models/Pool/source/pool_table_scene.fbx";
         const string MatFolder = "Assets/Materials/Interaccion";
 
-        // Medidas del modelo (cm): mitad del campo hasta la nariz de las bandas / mitad de la mesa.
+        // Medidas del modelo (cm): límites para la mira y caras de contacto de las bandas.
         const float LongRatio = 117f / 124.6f, ShortRatio = 56f / 70.3f;
+        const float EndCushionRatio = 112.5f / 124.6f, SideCushionRatio = 56.5f / 70.3f;
 
         [MenuItem("VR Bar/Armar Etapa 4 (pool)")]
         public static void Build()
@@ -37,18 +38,28 @@ namespace BarInteraccion.EditorTools
                 .FirstOrDefault(g => PrefabUtility.IsAnyPrefabInstanceRoot(g) && PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(g) == TablePath);
             if (table == null) { Debug.LogError("VR Bar: no encontré pool_table_scene en la escena."); return; }
 
-            Cleanup(table, log);
-
             var renderers = table.GetComponentsInChildren<MeshRenderer>(true);
             var tableR = renderers.FirstOrDefault(x => MeshName(x).Contains("pooltable"));
             var ballRs = renderers.Where(x => MeshName(x).StartsWith("billiard_ball")).ToList();
             var cueRs = renderers.Where(x => MeshName(x).StartsWith("pool_cue")).ToList();
             if (tableR == null || ballRs.Count == 0) { Debug.LogError("VR Bar: el modelo del pool no tiene la mesa o las bolas esperadas."); return; }
+            var numbers = ballRs.ToDictionary(b => b, b => BallNumber(b.GetComponent<MeshFilter>().sharedMesh));
+            if (!numbers.Values.OrderBy(n => n).SequenceEqual(Enumerable.Range(0, 16)))
+            {
+                Debug.LogError("VR Bar: el atlas de pool debe contener la blanca y las bolas 1 a 15.");
+                return;
+            }
+
+            Cleanup(table, log);
 
             Bounds tb = tableR.bounds;
             bool longX = tb.size.x >= tb.size.z;
-            float halfL = (longX ? tb.extents.x : tb.extents.z) * LongRatio;
-            float halfS = (longX ? tb.extents.z : tb.extents.x) * ShortRatio;
+            float longExtent = longX ? tb.extents.x : tb.extents.z;
+            float shortExtent = longX ? tb.extents.z : tb.extents.x;
+            float halfL = longExtent * LongRatio;
+            float halfS = shortExtent * ShortRatio;
+            float endCushion = longExtent * EndCushionRatio;
+            float sideCushion = shortExtent * SideCushionRatio;
             Vector3 L = longX ? Vector3.right : Vector3.forward, S = longX ? Vector3.forward : Vector3.right;
             // Medidas con los vértices reales (el AABB de una bola girada es más grande que la bola).
             var ballBox = ballRs.ToDictionary(b => b, WorldBox);
@@ -83,11 +94,11 @@ namespace BarInteraccion.EditorTools
             {
                 // Lados largos: dos tramos, cortados por la tronera del medio.
                 float a0 = -halfL + corner, a1 = -middle, b0 = middle, b1 = halfL - corner;
-                Vector3 sOff = S * side * (halfS + th * 0.5f);
+                Vector3 sOff = S * side * (sideCushion + th * 0.5f);
                 Box(root.transform, "Banda larga", center + L * ((a0 + a1) * 0.5f) + sOff + Vector3.up * y, L * (a1 - a0) + S * th + Vector3.up * h, rail);
                 Box(root.transform, "Banda larga", center + L * ((b0 + b1) * 0.5f) + sOff + Vector3.up * y, L * (b1 - b0) + S * th + Vector3.up * h, rail);
                 // Cabeceras.
-                Vector3 lOff = L * side * (halfL + th * 0.5f);
+                Vector3 lOff = L * side * (endCushion + th * 0.5f);
                 Box(root.transform, "Banda corta", center + lOff + Vector3.up * y, S * (2f * (halfS - corner)) + L * th + Vector3.up * h, rail);
                 // Bordes de seguridad (detrás de las troneras): nada se escapa de la mesa.
                 Box(root.transform, "Borde", center + S * side * (halfS + 0.14f) + Vector3.up * (feltY + 0.05f), L * (2f * halfL + 0.3f) + S * 0.02f + Vector3.up * 0.1f, rail);
@@ -96,20 +107,19 @@ namespace BarInteraccion.EditorTools
             int pockets = 0;
             foreach (float sl in new[] { -1f, 1f })
                 foreach (float ss in new[] { -1f, 1f })
-                    Pocket(root.transform, game, center + L * sl * (halfL + 0.025f) + S * ss * (halfS + 0.025f) + Vector3.up * (feltY + r), 0.065f, ref pockets);
+                    Pocket(root.transform, center + L * sl * (halfL + 0.025f) + S * ss * (halfS + 0.025f) + Vector3.up * (feltY + r), 0.065f, ref pockets);
             foreach (float ss in new[] { -1f, 1f })
-                Pocket(root.transform, game, center + S * ss * (halfS + 0.045f) + Vector3.up * (feltY + r), 0.055f, ref pockets);
+                Pocket(root.transform, center + S * ss * (halfS + 0.045f) + Vector3.up * (feltY + r), 0.055f, ref pockets);
             log.AppendLine($"• Paño, 6 bandas, bordes y {pockets} troneras.");
 
-            // Bolas: la blanca es la que está lejos del triángulo.
-            Vector3 rackCenter = Average(ballRs.Select(b => ballBox[b].center));
-            var cueBallR = ballRs.OrderByDescending(b => (ballBox[b].center - rackCenter).sqrMagnitude).First();
+            // Las UV de cada malla corresponden a una casilla del atlas de bolas.
+            var cueBallR = ballRs.First(b => numbers[b] == 0);
             var balls = new List<PoolBall>();
-            int n = 0;
-            foreach (var br in ballRs.OrderBy(b => b == cueBallR ? 0 : 1))
+            foreach (var br in ballRs.OrderBy(b => numbers[b]))
             {
                 var mf = br.GetComponent<MeshFilter>();
-                var body = new GameObject(br == cueBallR ? "Bola blanca" : $"Bola {++n}");
+                int number = numbers[br];
+                var body = new GameObject(number == 0 ? "Bola blanca" : $"Bola {number}");
                 Undo.RegisterCreatedObjectUndo(body, "Armar Etapa 4");
                 body.transform.SetParent(root.transform, false);
                 Vector3 c = ballBox[br].center; c.y = feltY + colR + 0.0002f;
@@ -125,8 +135,7 @@ namespace BarInteraccion.EditorTools
                 sc.contactOffset = 0.002f;
                 sc.sharedMaterial = ballMat;
                 var pb = body.AddComponent<PoolBall>();
-                pb.radius = r;
-                pb.isCue = br == cueBallR;
+                pb.number = number;
                 pb.game = game;
                 Visual(body.transform, mf.sharedMesh, br.sharedMaterials, br.transform.rotation, 2f * r / MaxSize(mf.sharedMesh.bounds));
                 balls.Add(pb);
@@ -137,7 +146,8 @@ namespace BarInteraccion.EditorTools
             log.AppendLine($"• {balls.Count} bolas físicas (la blanca: '{cueBallR.name}'). Las originales quedaron ocultas.");
 
             // Taco: el que está acostado sobre la mesa.
-            var cueR = cueRs.OrderBy(c => c.bounds.size.y).FirstOrDefault();
+            var cueR = cueRs.Where(c => PrefabUtility.IsPartOfModelPrefab(c) && !PrefabUtility.IsAddedGameObjectOverride(c.gameObject))
+                .OrderBy(c => c.bounds.size.y).FirstOrDefault() ?? cueRs.OrderBy(c => c.bounds.size.y).FirstOrDefault();
             if (cueR != null)
             {
                 var mf = cueR.GetComponent<MeshFilter>();
@@ -154,7 +164,9 @@ namespace BarInteraccion.EditorTools
                 game.cue = cueGo.transform;
                 game.cueTipLocal = rot * ((tipM - cm) * k);
                 game.cueBackLocal = rot * ((backM - cm) * k);
-                Hide(cueR.gameObject);
+                foreach (var original in cueRs)
+                    Hide(original.gameObject);
+                cueGo.SetActive(false);
                 log.AppendLine($"• Taco nuevo ({worldLen:0.00} m) en lugar de '{cueR.name}'.");
             }
 
@@ -229,16 +241,13 @@ namespace BarInteraccion.EditorTools
             b.contactOffset = 0.002f;
         }
 
-        static void Pocket(Transform parent, PoolGame game, Vector3 pos, float radius, ref int count)
+        static void Pocket(Transform parent, Vector3 pos, float radius, ref int count)
         {
             var go = new GameObject($"Tronera {++count}");
             Undo.RegisterCreatedObjectUndo(go, "Armar Etapa 4");
             go.transform.SetParent(parent, false);
             go.transform.position = pos;
-            var sc = go.AddComponent<SphereCollider>();
-            sc.isTrigger = true;
-            sc.radius = radius;
-            go.AddComponent<PoolPocket>().game = game;
+            go.AddComponent<PoolPocket>().captureRadius = radius;
         }
 
         static PhysicsMaterial PhysMat(string name, float dyn, float stat, float bounce, PhysicsMaterialCombine friction, PhysicsMaterialCombine bounceCombine)
@@ -331,11 +340,22 @@ namespace BarInteraccion.EditorTools
 
         static float MaxSize(Bounds b) => Mathf.Max(b.size.x, Mathf.Max(b.size.y, b.size.z));
 
-        static Vector3 Average(IEnumerable<Vector3> pts)
+        static int BallNumber(Mesh mesh)
         {
-            Vector3 s = Vector3.zero; int n = 0;
-            foreach (var p in pts) { s += p; n++; }
-            return n > 0 ? s / n : Vector3.zero;
+            var uv = mesh.uv;
+            if (uv.Length == 0) return -1;
+            Vector2 min = uv[0], max = uv[0];
+            foreach (var point in uv)
+            {
+                min = Vector2.Min(min, point);
+                max = Vector2.Max(max, point);
+            }
+            Vector2 center = (min + max) * 0.5f;
+            int column = Mathf.FloorToInt(center.x * 3f);
+            int row = Mathf.FloorToInt((1f - center.y) * 6f);
+            if (column < 0 || column > 2 || row < 0 || row > 5) return -1;
+            if (row == 5) return column == 0 ? 0 : -1;
+            return row * 3 + column + 1;
         }
     }
 }

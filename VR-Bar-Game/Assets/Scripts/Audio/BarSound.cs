@@ -44,6 +44,8 @@ namespace BarAudio
         /// <summary>Multiplicador de volumen (para los actos: la música sube en la hora pico, la lluvia cuando se abre la puerta).</summary>
         public float VolumeScale { get; private set; } = 1f;
 
+        public bool IsPlaying => source != null && source.isPlaying;
+
         AudioSource source;
         float baseVolume;
         int lastClip = -1;

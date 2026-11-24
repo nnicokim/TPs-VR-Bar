@@ -7,28 +7,36 @@ namespace BarInteraccion
     [RequireComponent(typeof(Rigidbody), typeof(SphereCollider))]
     public class PoolBall : MonoBehaviour
     {
-        public bool isCue;
-        public float radius = 0.0285f;
+        [Range(0, 15)] public int number;
         [HideInInspector] public PoolGame game;
 
+        public bool IsCue => number == 0;
         public Rigidbody Body { get; private set; }
+        public SphereCollider Shape { get; private set; }
+        public float CollisionRadius => Shape.radius;
         public bool Pocketed { get; private set; }
         public Vector3 StartPosition { get; private set; }
 
         Vector3 startScale;
         Quaternion startRotation;
+        RigidbodyInterpolation interpolation;
 
         void Awake()
         {
             Body = GetComponent<Rigidbody>();
+            Shape = GetComponent<SphereCollider>();
+            interpolation = Body.interpolation;
             StartPosition = transform.position;
             startRotation = transform.rotation;
             startScale = transform.localScale;
         }
 
-        void OnCollisionEnter(Collision c) { if (game != null) game.OnBallCollision(this, c); }
+        void OnCollisionEnter(Collision collision)
+        {
+            if (game != null) game.OnBallCollision(collision);
+        }
 
-        public void Stop()
+        void Stop()
         {
             Body.linearVelocity = Vector3.zero;
             Body.angularVelocity = Vector3.zero;
@@ -41,35 +49,44 @@ namespace BarInteraccion
             Body.Sleep();
         }
 
-        public void Pocket(Vector3 pocketCenter, float feltY)
+        public void Pocket(Vector3 entry, Vector3 pocketCenter, float feltY)
         {
             Pocketed = true;
-            StartCoroutine(Fall(pocketCenter, feltY));
+            Stop();
+            Body.isKinematic = true;
+            Body.interpolation = RigidbodyInterpolation.None;
+            Shape.enabled = false;
+            StartCoroutine(Fall(entry, new Vector3(pocketCenter.x, feltY - 0.12f, pocketCenter.z)));
         }
 
-        IEnumerator Fall(Vector3 pocketCenter, float feltY)
+        IEnumerator Fall(Vector3 entry, Vector3 bottom)
         {
-            Body.isKinematic = true;
-            GetComponent<Collider>().enabled = false;
-            Vector3 p0 = transform.position;
-            Vector3 p1 = new Vector3(pocketCenter.x, feltY - 0.12f, pocketCenter.z);
             yield return Ease.Run(0.3f, t =>
             {
-                transform.position = Vector3.Lerp(p0, p1, Ease.InCubic(t));
+                transform.position = Vector3.Lerp(entry, bottom, Ease.InCubic(t));
                 transform.localScale = startScale * Mathf.Lerp(1f, 0.7f, t);
             });
+            gameObject.SetActive(false);
+        }
+
+        public void FinishPocket()
+        {
+            StopAllCoroutines();
             gameObject.SetActive(false);
         }
 
         public void Respawn(Vector3 position)
         {
             StopAllCoroutines();
-            gameObject.SetActive(true);
             Pocketed = false;
-            transform.SetPositionAndRotation(position, startRotation);
             transform.localScale = startScale;
-            GetComponent<Collider>().enabled = true;
+            transform.SetPositionAndRotation(position, startRotation);
+            Body.position = position;
+            Body.rotation = startRotation;
+            Shape.enabled = true;
+            gameObject.SetActive(true);
             Body.isKinematic = false;
+            Body.interpolation = interpolation;
             Settle();
         }
     }

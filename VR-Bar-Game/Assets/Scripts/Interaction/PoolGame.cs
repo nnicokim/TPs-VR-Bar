@@ -7,16 +7,7 @@ using UnityEngine.UI;
 
 namespace BarInteraccion
 {
-    /// <summary>
-    /// Pool con física, pensado para Cardboard (mirada + un toque):
-    ///   1. Mirar la mesa y elegir → se toma el taco: aparece detrás de la bola blanca.
-    ///   2. Mirar un punto del paño: el taco y una línea guía apuntan hacia ahí. Más lejos = más fuerte.
-    ///   3. Tocar (o sostener la mirada quieta ~1,6 s, el anillo se llena) → el taco retrocede y golpea.
-    ///   Mirar fuera de la mesa un momento cancela el tiro.
-    /// Las bolas son cuerpos rígidos esféricos (el modelo original está estirado en altura y se ocultó);
-    /// bandas con rebote, troneras que se tragan las bolas, sonidos de choque, apertura y tronera.
-    /// La blanca embocada vuelve a su lugar. "Rearmar" vuelve a poner el triángulo.
-    /// </summary>
+    /// <summary>Pool para Cardboard, con dirección y fuerza por mirada y confirmación por toque o dwell.</summary>
     public class PoolGame : GazeInteractable
     {
         public enum Phase { Idle, Aiming, Rolling }
@@ -34,13 +25,21 @@ namespace BarInteraccion
         public Vector3 cueBackLocal = new Vector3(0f, 0f, -0.74f);
 
         [Header("Tiro")]
-        public float minSpeed = 0.5f;
-        public float maxSpeed = 3.4f;
+        [Min(0.01f)] public float minSpeed = 0.5f;
+        [Min(0.01f)] public float maxSpeed = 3.4f;
         [Tooltip("Distancia del punto apuntado (desde la blanca) que da la fuerza máxima.")]
         public float fullPowerDistance = 1.2f;
         [Tooltip("Segundos de mirada quieta para tirar (además del toque).")]
         public float aimDwell = 1.6f;
         public float maxPlayDistance = 3.2f;
+
+        const float MinAimDistance = 0.06f;
+        const float DwellTolerance = 0.025f;
+        const float CancelDelay = 1.5f;
+        const float CueReadyGap = 0.04f;
+        const float RestSpeed = 0.03f;
+        const float RestTime = 0.5f;
+        const float MaxRollTime = 15f;
 
         [Header("Sonido (fuente 'Pool' de la escena)")]
         public BarSound sound;
@@ -60,34 +59,66 @@ namespace BarInteraccion
         public int Shots { get; private set; }
         public int Pocketed { get; private set; }
 
-        Vector3 aimPoint, aimDir = Vector3.right, lastStable;
-        float dwell, offTable, lastHitSound;
-        bool firstBreakDone;
-        Vector3 cueRestPos;
-        Quaternion cueRestRot;
+        Vector3 aimPoint, stablePoint;
+        float dwell, offTable, idleDwell, lastHitSound;
+        bool hasStablePoint, firstBreakDone, shotInMotion;
+        float rollingTime, stillTime, originalBounceThreshold;
         Transform guide;
         RectTransform marker;
         Image markerFill;
-        float idleDwell;
+        PoolScoreboard scoreboard;
+        PoolPocket[] pockets;
+        Vector3[] previousPositions;
+        readonly RaycastHit[] guideHits = new RaycastHit[32];
+        BarSound[] hitVoices, pocketVoices;
+        BarSound breakVoice;
 
         void Awake()
         {
-            // Física de billar: rebotes también a baja velocidad y pasos chicos (bolas de 5,7 cm).
-            Physics.bounceThreshold = 0.15f;
-            Time.fixedDeltaTime = 0.01f;
-            if (cue != null) { cueRestPos = cue.position; cueRestRot = cue.rotation; }
-            foreach (var b in balls) if (b != null) b.game = this;
+            SetCueVisible(false);
+            if (balls == null) balls = System.Array.Empty<PoolBall>();
+            foreach (var ball in balls)
+                if (ball != null) ball.game = this;
+            pockets = GetComponentsInChildren<PoolPocket>();
+            previousPositions = new Vector3[balls.Length];
             BuildGuide();
+            scoreboard = new PoolScoreboard(transform,
+                new Vector3(transform.position.x, feltY + 0.43f, transform.position.z + halfField.y - 0.03f));
+            RefreshScoreboard();
             if (string.IsNullOrEmpty(label)) label = "Jugar al pool";
             if (highlightRoot == null && cueBall != null) highlightRoot = cueBall.transform;
-            idleDwell = dwellTime > 0f ? dwellTime : 1.2f;
-            dwellTime = idleDwell;
+            idleDwell = dwellTime;
         }
 
         void Start()
         {
             ApplyLighting();
-            foreach (var b in balls) if (b != null) b.Settle(); // quietas hasta el primer tiro
+            foreach (var ball in balls)
+                if (ball != null) ball.Settle();
+            if (sound != null)
+            {
+                hitVoices = new[] { sound, CreateVoice("Choques de pool") };
+                breakVoice = CreateVoice("Apertura de pool");
+                pocketVoices = new[] { CreateVoice("Tronera de pool"), CreateVoice("Tronera de pool adicional") };
+            }
+        }
+
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+            StopAllCoroutines();
+            EndMotion();
+            if (State == Phase.Rolling)
+            {
+                foreach (var ball in balls)
+                {
+                    if (ball == null) continue;
+                    if (ball.Pocketed) ball.FinishPocket();
+                    else ball.Settle();
+                }
+                RestoreWhiteBall();
+            }
+            SetIdle();
         }
 
         void OnValidate() { if (Application.isPlaying && balls != null) ApplyLighting(); }
@@ -116,9 +147,22 @@ namespace BarInteraccion
 
         protected override bool IsAvailable()
         {
-            if (State == Phase.Rolling || cueBall == null) return false;
-            var cam = GazePointer.Instance != null ? GazePointer.Instance.transform : null;
-            return cam != null && Vector3.Distance(Flat(cam.position), Flat(transform.position)) <= maxPlayDistance + halfField.x;
+            var pointer = GazePointer.Instance;
+            return State != Phase.Rolling && cueBall != null && pointer != null && IsNearTable(pointer.transform.position);
+        }
+
+        bool IsNearTable(Vector3 camera)
+        {
+            return Flat(camera - ClampToField(camera)).sqrMagnitude <= maxPlayDistance * maxPlayDistance;
+        }
+
+        protected override void LateUpdate()
+        {
+            base.LateUpdate();
+            var pointer = GazePointer.Instance;
+            if (pointer == null) return;
+            Vector3 viewer = pointer.transform.position;
+            scoreboard.Face(viewer, IsNearTable(viewer));
         }
 
         protected override Vector3 LabelPosition => State == Phase.Aiming
@@ -127,198 +171,342 @@ namespace BarInteraccion
 
         public override void OnSelect(GazePointer pointer)
         {
-            if (!IsAvailable()) return;
-            if (State == Phase.Idle) StartAiming(pointer);
-            else if (State == Phase.Aiming) StartCoroutine(Shoot());
-        }
+            if (!IsAvailable() || !TryAimPoint(pointer, out Vector3 point)) return;
 
-        // ---------- Apuntar ----------
-
-        void StartAiming(GazePointer pointer)
-        {
-            State = Phase.Aiming;
-            dwellTime = 999f; // mientras se apunta, el tiro lo dispara el anillo propio (o un toque)
-            aimPoint = OnFelt(pointer.HitPoint);
-            lastStable = aimPoint;
-            dwell = 0f; offTable = 0f;
-            guide.gameObject.SetActive(true);
-            marker.gameObject.SetActive(true);
-            SessionLog.Event("pool", "apuntar");
-        }
-
-        void CancelAiming()
-        {
-            State = Phase.Idle;
-            dwellTime = idleDwell;
-            guide.gameObject.SetActive(false);
-            marker.gameObject.SetActive(false);
-            StartCoroutine(ReturnCue());
-            label = "Jugar al pool";
+            if (State == Phase.Idle)
+            {
+                State = Phase.Aiming;
+                dwellTime = float.PositiveInfinity; // el anillo del pool confirma apuntados válidos
+                aimPoint = point;
+                offTable = 0f;
+                ClearAim();
+                SessionLog.Event("pool", "apuntar");
+            }
+            else if (TryShot(point, out Vector3 direction, out float power))
+            {
+                StartCoroutine(Shoot(direction, power));
+            }
         }
 
         void Update()
         {
             if (State != Phase.Aiming) return;
             var pointer = GazePointer.Instance;
-            if (pointer == null) return;
-
-            bool onTable = ReferenceEquals(pointer.Current, this);
-            if (!onTable)
+            if (!TryAimPoint(pointer, out Vector3 point))
             {
+                ClearAim();
+                SetCueVisible(false);
                 offTable += Time.deltaTime;
-                if (offTable > 1.5f) CancelAiming();
+                if (offTable >= CancelDelay)
+                    SetIdle();
                 return;
             }
+
             offTable = 0f;
+            aimPoint = point;
+            if (!TryShot(point, out Vector3 direction, out float power))
+            {
+                ClearAim();
+                SetCueVisible(false);
+                label = "Apuntá al paño";
+                return;
+            }
 
-            Vector3 p = OnFelt(pointer.HitPoint);
-            Vector3 c = cueBall.transform.position;
-            Vector3 d = Flat(p - c);
-            if (d.magnitude > 0.06f) { aimPoint = p; aimDir = d.normalized; }
-            float power = Mathf.Clamp01(Flat(aimPoint - c).magnitude / fullPowerDistance);
-            label = $"Tirar · {Mathf.RoundToInt(Mathf.Lerp(15f, 100f, power))}%";
+            bool timedShot = pointer.useDwell && aimDwell > 0f;
+            if (!hasStablePoint || (point - stablePoint).sqrMagnitude > DwellTolerance * DwellTolerance)
+            {
+                stablePoint = point;
+                hasStablePoint = true;
+                dwell = 0f;
+            }
+            else if (timedShot)
+            {
+                dwell += Time.deltaTime;
+            }
 
-            // Dwell propio: el puntero ya "eligió" la mesa, así que la quietud de la mirada dispara el tiro.
-            if ((aimPoint - lastStable).magnitude < 0.03f) dwell += Time.deltaTime;
-            else { dwell = 0f; lastStable = aimPoint; }
-            markerFill.fillAmount = Mathf.Clamp01(dwell / aimDwell);
+            int percent = PowerPercent(power);
+            label = $"Fuerza · {percent}%";
+            scoreboard.SetPower(percent);
+            PlaceCue(direction, CueReadyGap);
+            UpdateGuide(cueBall.Body.position, direction, point);
+            marker.position = point + Vector3.up * 0.004f;
+            marker.rotation = Quaternion.LookRotation(Vector3.down, direction);
+            markerFill.fillAmount = timedShot ? Mathf.Clamp01(dwell / aimDwell) : 0f;
+            guide.gameObject.SetActive(true);
+            marker.gameObject.SetActive(true);
 
-            PlaceCue(0.03f + 0.04f * Mathf.PingPong(Time.time * 1.5f, 1f)); // el taco "respira" mientras se apunta
-            UpdateGuide(c);
-            marker.position = new Vector3(aimPoint.x, feltY + 0.004f, aimPoint.z);
-            marker.rotation = Quaternion.LookRotation(Vector3.down, aimDir);
-
-            if (dwell >= aimDwell) StartCoroutine(Shoot());
+            if (timedShot && dwell >= aimDwell)
+            {
+                SessionLog.Selection(name, true);
+                StartCoroutine(Shoot(direction, power));
+            }
         }
 
-        IEnumerator Shoot()
+        bool TryAimPoint(GazePointer pointer, out Vector3 point)
         {
-            if (State != Phase.Aiming) yield break;
-            State = Phase.Rolling;
-            Shots++;
-            float power = Mathf.Clamp01(Flat(aimPoint - cueBall.transform.position).magnitude / fullPowerDistance);
-            guide.gameObject.SetActive(false);
-            marker.gameObject.SetActive(false);
-            label = "";
+            point = default;
+            if (pointer == null || pointer.Locked || !ReferenceEquals(pointer.Current, this)) return false;
+            var ray = new Ray(pointer.transform.position, pointer.transform.forward);
+            var plane = new Plane(Vector3.up, Vector3.up * feltY);
+            if (!plane.Raycast(ray, out float distance) || distance > pointer.maxDistance) return false;
+            point = ray.GetPoint(distance);
+            return IsInsideField(point);
+        }
 
-            // El taco retrocede y golpea.
-            float back = Mathf.Lerp(0.08f, 0.22f, power);
-            yield return Ease.Run(0.3f, t => PlaceCue(Mathf.Lerp(0.05f, back, Ease.OutCubic(t))));
-            yield return Ease.Run(0.06f, t => PlaceCue(Mathf.Lerp(back, 0.005f, Ease.InCubic(t))));
-            float speed = Mathf.Lerp(minSpeed, maxSpeed, power);
-            cueBall.Body.WakeUp();
-            cueBall.Body.linearVelocity = aimDir * speed;
-            PlayHit(cueBall.transform.position, Mathf.Lerp(0.3f, 0.8f, power));
-            SessionLog.Event("pool", "tiro", $"{Mathf.RoundToInt(power * 100)}%");
-            StartCoroutine(ReturnCue());
+        bool TryShot(Vector3 point, out Vector3 direction, out float power)
+        {
+            Vector3 offset = Flat(point - cueBall.Body.position);
+            float distance = offset.magnitude;
+            direction = offset.normalized;
+            power = Mathf.InverseLerp(MinAimDistance, Mathf.Max(MinAimDistance + 0.01f, fullPowerDistance), distance);
+            return distance >= MinAimDistance;
+        }
 
-            // Esperar a que todo se quede quieto.
-            float still = 0f, elapsed = 0f;
-            yield return new WaitForSeconds(0.3f);
-            while (still < 0.6f && elapsed < 15f)
-            {
-                elapsed += Time.deltaTime;
-                bool moving = false;
-                foreach (var b in balls)
-                    if (b != null && !b.Pocketed && b.Body.linearVelocity.sqrMagnitude > 0.0009f) { moving = true; break; }
-                still = moving ? 0f : still + Time.deltaTime;
-                yield return null;
-            }
-            foreach (var b in balls) if (b != null && !b.Pocketed) b.Settle();
+        int PowerPercent(float power) => Mathf.RoundToInt(100f * Mathf.Lerp(Mathf.Min(minSpeed, maxSpeed), maxSpeed, power) / maxSpeed);
 
-            if (cueBall.Pocketed) yield return RespawnCueBall();
+        void ClearAim()
+        {
+            dwell = 0f;
+            hasStablePoint = false;
+            scoreboard?.SetPower(-1);
+            if (guide != null) guide.gameObject.SetActive(false);
+            if (marker != null) marker.gameObject.SetActive(false);
+        }
+
+        void SetIdle()
+        {
             State = Phase.Idle;
             dwellTime = idleDwell;
             label = "Jugar al pool";
+            ClearAim();
+            SetCueVisible(false);
         }
 
-        void PlaceCue(float gap)
+        IEnumerator Shoot(Vector3 direction, float power)
+        {
+            State = Phase.Rolling;
+            ClearAim();
+            label = "";
+
+            float back = Mathf.Lerp(0.08f, 0.22f, power);
+            yield return Ease.Run(0.3f, t => PlaceCue(direction, Mathf.Lerp(CueReadyGap, back, Ease.OutCubic(t))));
+            yield return Ease.Run(0.06f, t => PlaceCue(direction, Mathf.Lerp(back, 0f, Ease.InCubic(t))));
+
+            for (int i = 0; i < balls.Length; i++)
+                if (balls[i] != null) previousPositions[i] = balls[i].Body.position;
+            stillTime = 0f;
+            rollingTime = 0f;
+            lastHitSound = float.NegativeInfinity;
+            // PhysX aplica este umbral a toda la escena. Se restaura al terminar el rodaje.
+            originalBounceThreshold = Physics.bounceThreshold;
+            Physics.bounceThreshold = Mathf.Min(originalBounceThreshold, 0.15f);
+            shotInMotion = true;
+
+            cueBall.Body.WakeUp();
+            cueBall.Body.linearVelocity = direction * Mathf.Lerp(Mathf.Min(minSpeed, maxSpeed), maxSpeed, power);
+            Shots++;
+            PlayHit(cueBall.Body.position, Mathf.Lerp(0.3f, 0.8f, power));
+            SessionLog.Event("pool", "tiro", $"{PowerPercent(power)}%");
+            SetCueVisible(false);
+        }
+
+        void PlaceCue(Vector3 direction, float gap)
         {
             if (cue == null) return;
-            Vector3 c = cueBall.transform.position;
-            Vector3 dir = (aimDir + Vector3.down * 0.08f).normalized; // levemente inclinado, como un taco real
-            Vector3 tip = c - dir * (cueBall.radius + gap);
-            Vector3 axis = (cueTipLocal - cueBackLocal).normalized;
-            Quaternion rot = Quaternion.FromToRotation(axis, dir);
-            cue.SetPositionAndRotation(tip - rot * cueTipLocal, rot);
+            Vector3 dir = (direction + Vector3.down * 0.08f).normalized;
+            Vector3 tip = cueBall.transform.position - dir * (cueBall.CollisionRadius + gap);
+            Quaternion rotation = Quaternion.FromToRotation((cueTipLocal - cueBackLocal).normalized, dir);
+            cue.SetPositionAndRotation(tip - rotation * cueTipLocal, rotation);
+            SetCueVisible(true);
         }
 
-        IEnumerator ReturnCue()
+        void SetCueVisible(bool visible)
         {
-            if (cue == null) yield break;
-            yield return new WaitForSeconds(0.5f);
-            Vector3 p0 = cue.position; Quaternion r0 = cue.rotation;
-            yield return Ease.Run(0.6f, t =>
-            {
-                float e = Ease.InOutCubic(t);
-                cue.SetPositionAndRotation(Vector3.Lerp(p0, cueRestPos, e), Quaternion.Slerp(r0, cueRestRot, e));
-            });
+            if (cue != null && cue.gameObject.activeSelf != visible)
+                cue.gameObject.SetActive(visible);
         }
 
-        // ---------- Bolas ----------
-
-        public void OnBallCollision(PoolBall ball, Collision collision)
+        void FixedUpdate()
         {
-            if (State != Phase.Rolling) return; // solo suenan los choques de un tiro
-            if (collision.collider.GetComponent<PoolBall>() == null) return;
-            float v = collision.relativeVelocity.magnitude;
-            if (v < 0.12f || Time.time - lastHitSound < 0.04f) return;
-            if (!firstBreakDone && v > 1.4f && breakClip != null)
+            if (!shotInMotion) return;
+            bool moving = false;
+            for (int i = 0; i < balls.Length; i++)
             {
-                firstBreakDone = true;
-                Play(breakClip, collision.GetContact(0).point, 1f);
-                return;
+                var ball = balls[i];
+                if (ball == null || ball.Pocketed) continue;
+
+                Vector3 from = previousPositions[i];
+                Vector3 to = ball.Body.position;
+                if (TryPocket(ball, from, to))
+                {
+                    moving = true;
+                    continue;
+                }
+
+                if (to.y < feltY - ball.CollisionRadius || !IsInsideField(to, -0.2f))
+                {
+                    ReturnBall(ball, from);
+                    to = ball.Body.position;
+                }
+
+                previousPositions[i] = to;
+                moving |= ball.Body.linearVelocity.sqrMagnitude > RestSpeed * RestSpeed
+                    || ball.Body.angularVelocity.sqrMagnitude * ball.CollisionRadius * ball.CollisionRadius > RestSpeed * RestSpeed;
             }
-            PlayHit(collision.GetContact(0).point, Mathf.Clamp01(v / 2.5f));
+
+            rollingTime += Time.fixedDeltaTime;
+            stillTime = moving ? 0f : stillTime + Time.fixedDeltaTime;
+            if (stillTime < RestTime && rollingTime < MaxRollTime) return;
+
+            EndMotion();
+            foreach (var ball in balls)
+                if (ball != null && !ball.Pocketed) ball.Settle();
+            RestoreWhiteBall();
+            SetIdle();
         }
 
-        public void OnPocket(PoolBall ball, Vector3 pocketCenter)
+        void EndMotion()
         {
-            if (ball.Pocketed) return;
-            ball.Pocket(pocketCenter, feltY);
-            if (State == Phase.Rolling) Play(pocketClip, pocketCenter, 0.9f);
-            if (!ball.isCue)
+            if (!shotInMotion) return;
+            Physics.bounceThreshold = originalBounceThreshold;
+            shotInMotion = false;
+        }
+
+        bool TryPocket(PoolBall ball, Vector3 from, Vector3 to)
+        {
+            foreach (var pocket in pockets)
             {
-                Pocketed++;
-                SessionLog.Event("pool", "embocada", ball.name);
+                if (pocket == null || !pocket.isActiveAndEnabled
+                    || !pocket.TryGetEntry(from, to, ball.CollisionRadius, out float entry))
+                    continue;
+                Vector3 center = pocket.transform.position;
+                ball.Pocket(Vector3.Lerp(from, to, entry), center, feltY);
+                PlayAvailable(pocketVoices, pocketClip, center, 0.9f);
+                if (ball.IsCue) SessionLog.Event("pool", "blanca embocada");
+                else
+                {
+                    Pocketed++;
+                    RefreshScoreboard();
+                    SessionLog.Event("pool", "embocada", ball.name);
+                }
+                return true;
             }
-            else SessionLog.Event("pool", "blanca embocada");
-        }
-
-        IEnumerator RespawnCueBall()
-        {
-            yield return new WaitForSeconds(0.4f);
-            Vector3 spot = cueBall.StartPosition;
-            for (int i = 0; i < 12 && Occupied(spot, cueBall); i++) spot += Vector3.right * (cueBall.radius * 2.2f) * (i % 2 == 0 ? 1 : -1) * (i + 1);
-            cueBall.Respawn(spot);
-        }
-
-        bool Occupied(Vector3 p, PoolBall except)
-        {
-            foreach (var b in balls)
-                if (b != null && b != except && !b.Pocketed && (b.transform.position - p).magnitude < b.radius * 2.1f) return true;
             return false;
         }
 
-        /// <summary>Vuelve a armar el triángulo y la blanca.</summary>
+        void RefreshScoreboard()
+        {
+            int solids = 0, stripes = 0, eight = 0;
+            foreach (var ball in balls)
+            {
+                if (ball == null || ball.IsCue || !ball.Pocketed) continue;
+                if (ball.number < 8) solids++;
+                else if (ball.number > 8) stripes++;
+                else eight++;
+            }
+            scoreboard.SetScore(solids, stripes, eight);
+        }
+
+        void RestoreWhiteBall()
+        {
+            if (cueBall != null && cueBall.Pocketed) ReturnBall(cueBall, cueBall.StartPosition);
+        }
+
+        void ReturnBall(PoolBall ball, Vector3 preferred)
+        {
+            preferred.y = ball.StartPosition.y;
+            if (IsFreeSpot(preferred, ball))
+            {
+                ball.Respawn(preferred);
+                return;
+            }
+
+            float padding = ball.CollisionRadius + 0.003f;
+            float step = padding * 2f;
+            Vector3 center = transform.position;
+            Vector3 best = ball.StartPosition;
+            float distance = float.PositiveInfinity;
+            for (float x = -halfField.x + padding; x <= halfField.x - padding; x += step)
+            {
+                for (float z = -halfField.y + padding; z <= halfField.y - padding; z += step)
+                {
+                    var candidate = new Vector3(center.x + x, preferred.y, center.z + z);
+                    float sqrDistance = (candidate - preferred).sqrMagnitude;
+                    if (sqrDistance >= distance || !IsFreeSpot(candidate, ball)) continue;
+                    best = candidate;
+                    distance = sqrDistance;
+                }
+            }
+            ball.Respawn(best);
+        }
+
+        bool IsFreeSpot(Vector3 point, PoolBall ball)
+        {
+            if (!IsInsideField(point, ball.CollisionRadius + 0.002f)) return false;
+            foreach (var pocket in pockets)
+                if (pocket != null && pocket.isActiveAndEnabled
+                    && pocket.TryGetEntry(point, point, ball.CollisionRadius, out _)) return false;
+
+            foreach (var other in balls)
+            {
+                if (other == null || other == ball || other.Pocketed) continue;
+                float separation = ball.CollisionRadius + other.CollisionRadius + 0.002f;
+                if (Flat(point - other.Body.position).sqrMagnitude < separation * separation) return false;
+            }
+            return true;
+        }
+
         public void ResetTable()
         {
             if (State == Phase.Rolling) return;
-            if (State == Phase.Aiming) CancelAiming();
-            foreach (var b in balls) if (b != null) b.Respawn(b.StartPosition);
+            if (State == Phase.Aiming) SetIdle();
+            foreach (var ball in balls)
+                if (ball != null) ball.Respawn(ball.StartPosition);
+            RefreshScoreboard();
             firstBreakDone = false;
             SessionLog.Event("pool", "rearmar");
         }
 
-        void PlayHit(Vector3 at, float loudness)
+        public void OnBallCollision(Collision collision)
         {
-            lastHitSound = Time.time;
-            Play(hitClip, at, loudness);
+            if (!shotInMotion || collision.contactCount == 0 || !collision.collider.TryGetComponent<PoolBall>(out _)) return;
+            float speed = collision.relativeVelocity.magnitude;
+            if (speed < 0.12f || Time.time - lastHitSound < 0.04f) return;
+
+            Vector3 contact = collision.GetContact(0).point;
+            if (!firstBreakDone && speed > 1.4f && breakVoice != null && breakClip != null)
+            {
+                firstBreakDone = true;
+                lastHitSound = Time.time;
+                breakVoice.PlaySpecific(breakClip, contact);
+                return;
+            }
+            PlayHit(contact, Mathf.Clamp01(speed / 2.5f));
         }
 
-        void Play(AudioClip clip, Vector3 at, float loudness)
+        BarSound CreateVoice(string objectName)
         {
-            if (sound != null && clip != null) sound.PlaySpecific(clip, at, loudness);
+            var voice = Instantiate(sound, transform);
+            voice.name = objectName;
+            voice.automatic = false;
+            return voice;
+        }
+
+        void PlayHit(Vector3 at, float loudness)
+        {
+            if (PlayAvailable(hitVoices, hitClip, at, loudness)) lastHitSound = Time.time;
+        }
+
+        static bool PlayAvailable(BarSound[] voices, AudioClip clip, Vector3 at, float loudness)
+        {
+            if (voices == null || clip == null) return false;
+            foreach (var voice in voices)
+            {
+                if (voice.IsPlaying) continue;
+                voice.PlaySpecific(clip, at, loudness);
+                return true;
+            }
+            return false;
         }
 
         // ---------- Guía visual ----------
@@ -327,6 +515,7 @@ namespace BarInteraccion
         {
             var g = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             g.name = "Linea guia";
+            g.transform.SetParent(transform, false);
             Destroy(g.GetComponent<Collider>());
             g.AddComponent<NoGazeOutline>();
             guide = g.transform;
@@ -343,6 +532,7 @@ namespace BarInteraccion
             var canvas = mgo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
             marker = (RectTransform)mgo.transform;
+            marker.SetParent(transform, false);
             marker.sizeDelta = new Vector2(100f, 100f);
             marker.localScale = Vector3.one * 0.0007f; // 7 cm
             var ring = UiChild(marker, "Anillo", GazeReticle.CircleSprite(0.8f));
@@ -367,26 +557,45 @@ namespace BarInteraccion
             return img;
         }
 
-        void UpdateGuide(Vector3 from)
+        void UpdateGuide(Vector3 from, Vector3 direction, Vector3 point)
         {
-            // Hasta el primer choque (bola o banda) o hasta el punto apuntado.
-            float len = Flat(aimPoint - from).magnitude;
-            if (Physics.SphereCast(from, cueBall.radius * 0.95f, aimDir, out RaycastHit hit, len + 3f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
-                if (hit.collider.GetComponent<PoolBall>() != cueBall) len = hit.distance;
-            len = Mathf.Max(0.02f, len);
-            Vector3 a = new Vector3(from.x, feltY + 0.003f, from.z);
-            guide.position = a + aimDir * (len * 0.5f);
-            guide.rotation = Quaternion.FromToRotation(Vector3.up, aimDir);
+            float len = float.PositiveInfinity;
+            float radius = Mathf.Max(0.001f, cueBall.CollisionRadius - 0.001f);
+            float reach = halfField.magnitude * 2f;
+            int count = Physics.SphereCastNonAlloc(from, radius, direction, guideHits, reach,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < count; i++)
+            {
+                RaycastHit hit = guideHits[i];
+                if (hit.distance <= 0f || hit.collider == cueBall.Shape || !hit.transform.IsChildOf(transform)) continue;
+                len = Mathf.Min(len, hit.distance);
+            }
+
+            Vector3 end = from + direction * reach;
+            foreach (var pocket in pockets)
+                if (pocket != null && pocket.isActiveAndEnabled
+                    && pocket.TryGetEntry(from, end, cueBall.CollisionRadius, out float entry))
+                    len = Mathf.Min(len, entry * reach);
+
+            if (float.IsPositiveInfinity(len)) len = Flat(point - from).magnitude;
+            Vector3 start = new Vector3(from.x, feltY + 0.003f, from.z);
+            guide.position = start + direction * (len * 0.5f);
+            guide.rotation = Quaternion.FromToRotation(Vector3.up, direction);
             guide.localScale = new Vector3(0.004f, len * 0.5f, 0.004f);
         }
 
-        Vector3 OnFelt(Vector3 p)
+        bool IsInsideField(Vector3 point, float padding = 0f)
         {
-            Vector3 c = transform.position;
-            p.x = Mathf.Clamp(p.x, c.x - halfField.x, c.x + halfField.x);
-            p.z = Mathf.Clamp(p.z, c.z - halfField.y, c.z + halfField.y);
-            p.y = feltY;
-            return p;
+            Vector3 offset = point - transform.position;
+            return Mathf.Abs(offset.x) <= halfField.x - padding && Mathf.Abs(offset.z) <= halfField.y - padding;
+        }
+
+        Vector3 ClampToField(Vector3 point)
+        {
+            Vector3 center = transform.position;
+            point.x = Mathf.Clamp(point.x, center.x - halfField.x, center.x + halfField.x);
+            point.z = Mathf.Clamp(point.z, center.z - halfField.y, center.z + halfField.y);
+            return point;
         }
 
         static Vector3 Flat(Vector3 v) { v.y = 0f; return v; }

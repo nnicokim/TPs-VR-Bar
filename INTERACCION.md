@@ -189,47 +189,48 @@ Durante toda la noche: la puerta de la cocina se abre cuando suena; al abrirse l
 
 # Etapa 4: pool con física, registro de sesión y prueba en Cardboard
 
-## Cómo armarla (una sola vez)
+## Dónde abrirla
 
-1. Abrir `SampleScene` y esperar a que compile.
-2. Menú **VR Bar → Armar Etapa 4 (pool)**. La Consola muestra un resumen (medidas de la mesa, bolas, taco, sonido).
-3. Guardar la escena (Ctrl+S). No hace falta rehornear.
-4. Probar, commitear la escena y borrar `Assets/Scripts/Editor/SetupEtapa4.cs` (y la carpeta `Editor`, que queda vacía).
-
-Se puede correr de nuevo: deshace lo que armó antes y vuelve a medir el modelo.
+El pool ya está armado en `SampleScene`. Abrí la escena y dale Play. El menú **VR Bar → Armar Etapa 4 (pool)**
+reconstruye la mesa a partir del modelo importado si necesitás regenerarla.
 
 ## Cómo probar
 
 - Ir al aro **Pool**. La bola blanca se contornea al mirar la mesa (*Jugar al pool*).
-- Elegir la mesa (mirar fijo o tocar) → **modo apuntar**: el taco se apoya detrás de la blanca y "respira", una línea
-  punteada sale de la blanca hacia donde se mira y un anillo en el paño marca el punto. **Mirar más lejos de la blanca es
-  tirar más fuerte** (la etiqueta dice *Tirar · 15–100 %*).
-- **Tiro:** quedarse quieto mirando el punto hasta que el anillo se llena (1,6 s) o tocar la pantalla. El taco retrocede,
-  pega y la blanca sale. Bolas, bandas y troneras son física real (PhysX): choques, rebotes y frenado por el paño.
-- Mirar fuera de la mesa 1,5 s cancela el tiro y el taco vuelve a su lugar.
-- Bola embocada: cae en la tronera con su sonido. Si se emboca la blanca, vuelve a su lugar de salida.
-- **[ Rearmar mesa ]** (cartel sobre la banda del lado del aro) vuelve a armar el triángulo.
+- Elegí la mesa mirando fijo o tocando. El taco aparece detrás de la blanca mientras apuntás y se guarda al golpear
+  o al apartar la mirada. El anillo marca el punto al que apuntás
+  sobre el paño, y la línea guía llega hasta el primer choque o tronera que encuentra en esa dirección.
+- Para cambiar la fuerza sin cambiar la dirección, mové el retículo más cerca o más lejos de la blanca por la misma
+  línea. El porcentaje indica la velocidad con la que saldrá la blanca respecto del máximo. También aparece en la
+  barra del marcador. Mirar a menos de 6 cm de la blanca pausa el apuntado y reinicia el progreso del anillo.
+- Para tirar, tocá la pantalla o sostené la mirada en un punto válido hasta que el anillo se llene (1,6 s).
+  El taco retrocede, golpea y la blanca sale. Al perder el punto, el anillo vuelve a empezar. Mirar fuera de la mesa
+  durante 1,5 s cancela el tiro.
+- Una bola se emboca cuando su centro cruza la boca de la tronera. Si se emboca la blanca, se repone cuando termina
+  el tiro, en su lugar de salida o en el punto libre más cercano.
+- El marcador muestra las lisas (1 a 7), las rayadas (9 a 15) y la bola 8 por separado. La blanca no suma.
+- **[ Rearmar mesa ]** (cartel sobre la banda del lado del aro) vuelve a armar el triángulo y pone en cero el marcador.
 - Los tiros y las bolas embocadas aparecen en la tarjeta final.
 
 ## Qué agrega a la escena
 
 | Dónde | Qué |
 |---|---|
-| `[Etapa4] Pool (juego)` | `PoolGame` en el centro de la mesa, con el paño (collider), 6 bandas con los huecos de las troneras, bordes de seguridad y 6 troneras (`PoolPocket`, triggers). |
+| `[Etapa4] Pool (juego)` | `PoolGame` en el centro de la mesa, con un collider para el paño, 6 bandas, bordes de seguridad y 6 bocas de tronera (`PoolPocket`). |
 | `[Etapa4] Pool (juego)/Bola …` | 16 bolas físicas (`PoolBall`: `Rigidbody` + `SphereCollider`) con la malla y el material de las originales. |
 | `[Etapa4] Pool (juego)/[Etapa4] Taco` | El taco que se usa para tirar (copia del que estaba sobre la mesa). |
 | `[Etapa4] Pool (juego)/[Etapa4] Rearmar mesa` | `PoolResetButton`. |
-| `pool_table_scene` | Las bolas y el taco originales quedan **desactivados**: la mesa está estirada en altura (escala Y 1,3), así que eran óvalos y no sirven para física. |
+| `pool_table_scene` | Las bolas originales y los tacos decorativos quedan desactivados. Las bandas físicas se alinean con el borde visible del modelo. |
 | `Assets/Materials/Interaccion/Pool *.physicMaterial` | Paño (frena), banda (rebota 0,78) y bola (rebota 0,93, casi sin roce). |
-| Fuente `Pool` (sonido) | `automatic = false`: ya no suena sola; toca F1 en la apertura, F2 en cada choque y F3 en la tronera, desde donde pasa. |
+| Fuente `Pool` (sonido) | Sirve de plantilla para las fuentes espaciales de apertura, choques y troneras. Pueden sonar a la vez desde donde ocurre cada evento. |
 | `Pedidos y actos` | Referencia al pool (para el resumen). |
 
 ## Scripts nuevos
 
 | Script | Qué hace |
 |---|---|
-| `PoolGame` | Apuntar con la mirada (dirección y fuerza), dwell propio para el tiro, animación del taco, espera a que todo se quede quieto, reposición de la blanca, sonidos por choque. Ajusta `Physics.bounceThreshold` y el paso fijo (10 ms) para bolas chicas. Las bolas arrancan dormidas (nada se mueve hasta el primer tiro) y solo suenan los choques de un tiro. Ilumina bolas y taco con una "lámpara" propia (armónicos esféricos: `lampColor`, `lampIntensity`, `fillColor`, ajustables en Play), porque las lámparas de la mesa son de área, solo horneadas, y no hay sondas de luz sobre la mesa. |
-| `PoolBall`, `PoolPocket`, `PoolResetButton` | Bola física (caer en la tronera, reponerse), tronera y cartel para rearmar. |
+| `PoolGame` | Proyecta la mirada sobre el plano del paño y usa el mismo punto para la guía y para confirmar por toque o mirada. Supervisa la física en pasos fijos, baja temporalmente el umbral de rebote durante el rodaje y lo restaura al terminar. Ilumina bolas y taco con armónicos esféricos configurables (`lampColor`, `lampIntensity`, `fillColor`). |
+| `PoolBall`, `PoolPocket`, `PoolResetButton` | La bola se anima al caer y se puede reponer. La tronera evalúa el segmento recorrido por el centro de la bola entre pasos de física. El cartel repone el triángulo. |
 | `SessionLog` | Registro de la sesión en CSV para la prueba con personas (ver abajo). |
 | `BarSound` (cambio) | `PlaySpecific(clip, posición, volumen)`: toca un clip puntual en un lugar. |
 | Varios (cambios) | `GazePointer`, `GazeTeleporter`, `OrderManager`, `ClosingTask`, `DartGame`, `ArcadeSecret` y `EndCard` anotan eventos en el registro. |
@@ -251,4 +252,4 @@ Con eso salen las métricas de `PRUEBA_CARDBOARD.md` sin cronometrar a mano.
 | **Patrones** | Apuntar con la cabeza + dwell (la mirada es el taco); la distancia de la mirada es la fuerza (un solo canal de entrada, dos parámetros); cancelar mirando afuera; reinicio diegético. |
 | **Ofrecimientos** | La blanca contorneada dice "por acá se empieza"; la línea y el anillo muestran adónde va el tiro antes de tirar; el anillo que se llena anticipa el disparo (y da tiempo a arrepentirse). |
 | **Flow** | Desafío abierto y sin fin: la habilidad (apuntar y medir la fuerza) mejora tiro a tiro; feedback inmediato (sonido de cada choque, bola que cae). Sin puntaje que presione. |
-| **Animación** | Física de bolas, taco que respira, retrocede y pega, bola que cae en la tronera, blanca que reaparece. |
+| **Animación** | Física de bolas, taco que se alinea, retrocede y pega, bola que cae en la tronera, blanca que reaparece. |
