@@ -7,10 +7,10 @@ using UnityEngine.UI;
 
 namespace BarInteraccion
 {
-    /// <summary>Pool para Cardboard, con dirección y fuerza por mirada y confirmación por toque o dwell.</summary>
+    /// <summary>Pool para Cardboard. La mirada marca la dirección. Mantener apretado carga la fuerza y soltar tira.</summary>
     public class PoolGame : GazeInteractable
     {
-        public enum Phase { Idle, Aiming, Rolling }
+        public enum Phase { Idle, Aiming, Power, Rolling }
 
         [Header("Mesa")]
         public float feltY = 0.99f;
@@ -27,15 +27,15 @@ namespace BarInteraccion
         [Header("Tiro")]
         [Min(0.01f)] public float minSpeed = 0.5f;
         [Min(0.01f)] public float maxSpeed = 3.4f;
-        [Tooltip("Distancia del punto apuntado (desde la blanca) que da la fuerza máxima.")]
-        public float fullPowerDistance = 1.2f;
-        [Tooltip("Segundos de mirada quieta para tirar (además del toque).")]
-        public float aimDwell = 1.6f;
+        [Tooltip("Segundos manteniendo apretado para llegar a la fuerza máxima.")]
+        public float chargeTime = 0.9f;
+        [Tooltip("Qué tan rápido el taco sigue a la cabeza. Más alto, más pegado.")]
+        public float aimSmoothing = 8f;
         public float maxPlayDistance = 3.2f;
 
         const float MinAimDistance = 0.06f;
-        const float DwellTolerance = 0.025f;
-        const float CancelDelay = 1.5f;
+        const float CancelDelay = 3.5f;
+        const float AimMargin = 0.28f;
         const float CueReadyGap = 0.04f;
         const float RestSpeed = 0.03f;
         const float RestTime = 0.5f;
@@ -59,9 +59,9 @@ namespace BarInteraccion
         public int Shots { get; private set; }
         public int Pocketed { get; private set; }
 
-        Vector3 aimPoint, stablePoint;
-        float dwell, offTable, idleDwell, lastHitSound;
-        bool hasStablePoint, firstBreakDone, shotInMotion;
+        Vector3 aimPoint, lockedDirection;
+        float offTable, idleDwell, lastHitSound, powerTime;
+        bool hasAim, firstBreakDone, shotInMotion, waitForRelease;
         float rollingTime, stillTime, originalBounceThreshold;
         Transform guide;
         RectTransform marker;
@@ -165,109 +165,131 @@ namespace BarInteraccion
             scoreboard.Face(viewer, IsNearTable(viewer));
         }
 
-        protected override Vector3 LabelPosition => State == Phase.Aiming
+        protected override Vector3 LabelPosition => State == Phase.Aiming || State == Phase.Power
             ? aimPoint + Vector3.up * 0.14f
             : (cueBall != null ? cueBall.transform.position : transform.position) + Vector3.up * 0.3f;
 
         public override void OnSelect(GazePointer pointer)
         {
-            if (!IsAvailable() || !TryAimPoint(pointer, out Vector3 point)) return;
+            if (!IsAvailable()) return;
 
             if (State == Phase.Idle)
             {
+                if (!TryAimPoint(pointer, out Vector3 point) || !TryDirection(point, out Vector3 direction)) return;
                 State = Phase.Aiming;
-                dwellTime = float.PositiveInfinity; // el anillo del pool confirma apuntados válidos
-                aimPoint = point;
+                dwellTime = float.PositiveInfinity;
                 offTable = 0f;
-                ClearAim();
+                lockedDirection = direction;
+                hasAim = true;
+                waitForRelease = GazeInput.Held();
+                scoreboard.SetPower(-1);
+                ShowAim(direction, 0f);
+                label = "Mantené apretado para tirar";
                 SessionLog.Event("pool", "apuntar");
-            }
-            else if (TryShot(point, out Vector3 direction, out float power))
-            {
-                StartCoroutine(Shoot(direction, power));
             }
         }
 
         void Update()
         {
-            if (State != Phase.Aiming) return;
-            var pointer = GazePointer.Instance;
-            if (!TryAimPoint(pointer, out Vector3 point))
-            {
-                ClearAim();
-                SetCueVisible(false);
-                offTable += Time.deltaTime;
-                if (offTable >= CancelDelay)
-                    SetIdle();
-                return;
-            }
-
-            offTable = 0f;
-            aimPoint = point;
-            if (!TryShot(point, out Vector3 direction, out float power))
-            {
-                ClearAim();
-                SetCueVisible(false);
-                label = "Apuntá al paño";
-                return;
-            }
-
-            bool timedShot = pointer.useDwell && aimDwell > 0f;
-            if (!hasStablePoint || (point - stablePoint).sqrMagnitude > DwellTolerance * DwellTolerance)
-            {
-                stablePoint = point;
-                hasStablePoint = true;
-                dwell = 0f;
-            }
-            else if (timedShot)
-            {
-                dwell += Time.deltaTime;
-            }
-
-            int percent = PowerPercent(power);
-            label = $"Fuerza · {percent}%";
-            scoreboard.SetPower(percent);
-            PlaceCue(direction, CueReadyGap);
-            UpdateGuide(cueBall.Body.position, direction, point);
-            marker.position = point + Vector3.up * 0.004f;
-            marker.rotation = Quaternion.LookRotation(Vector3.down, direction);
-            markerFill.fillAmount = timedShot ? Mathf.Clamp01(dwell / aimDwell) : 0f;
-            guide.gameObject.SetActive(true);
-            marker.gameObject.SetActive(true);
-
-            if (timedShot && dwell >= aimDwell)
-            {
-                SessionLog.Selection(name, true);
-                StartCoroutine(Shoot(direction, power));
-            }
+            if (State == Phase.Aiming) UpdateAim();
+            else if (State == Phase.Power) UpdatePower();
         }
 
-        bool TryAimPoint(GazePointer pointer, out Vector3 point)
+        void UpdateAim()
+        {
+            var pointer = GazePointer.Instance;
+            if (TryAimPoint(pointer, out Vector3 point, false) && TryDirection(point, out Vector3 direction))
+            {
+                offTable = 0f;
+                lockedDirection = hasAim
+                    ? Vector3.Slerp(lockedDirection, direction, 1f - Mathf.Exp(-aimSmoothing * Time.deltaTime)).normalized
+                    : direction;
+                hasAim = true;
+                label = "Mantené apretado para tirar";
+                scoreboard.SetPower(-1);
+                ShowAim(lockedDirection, 0f);
+                if (waitForRelease)
+                {
+                    if (!GazeInput.Held()) waitForRelease = false;
+                    return;
+                }
+                if (GazeInput.Held()) BeginCharge();
+                return;
+            }
+
+            offTable += Time.deltaTime;
+            if (!hasAim || offTable >= CancelDelay)
+                SetIdle();
+        }
+
+        void BeginCharge()
+        {
+            State = Phase.Power;
+            powerTime = 0f;
+            SessionLog.Event("pool", "fuerza");
+        }
+
+        void UpdatePower()
+        {
+            if (GazeInput.Held())
+            {
+                powerTime += Time.deltaTime;
+                float power = ChargePower();
+                int percent = PowerPercent(power);
+                label = $"Fuerza · {percent}%";
+                scoreboard.SetPower(percent);
+                ShowAim(lockedDirection, power);
+                return;
+            }
+
+            StartCoroutine(Shoot(lockedDirection, ChargePower()));
+        }
+
+        float ChargePower()
+        {
+            return Mathf.Clamp01(powerTime / Mathf.Max(0.15f, chargeTime));
+        }
+
+        void ShowAim(Vector3 direction, float fill)
+        {
+            Vector3 origin = cueBall.Body.position;
+            origin.y = feltY;
+            aimPoint = origin + direction * 0.4f;
+            PlaceCue(direction, CueReadyGap);
+            UpdateGuide(cueBall.Body.position, direction, origin + direction * (halfField.magnitude * 2f));
+            marker.position = aimPoint + Vector3.up * 0.004f;
+            marker.rotation = Quaternion.LookRotation(Vector3.down, direction);
+            markerFill.fillAmount = fill;
+            guide.gameObject.SetActive(true);
+            marker.gameObject.SetActive(true);
+        }
+
+        bool TryAimPoint(GazePointer pointer, out Vector3 point, bool requireGaze = true)
         {
             point = default;
-            if (pointer == null || pointer.Locked || !ReferenceEquals(pointer.Current, this)) return false;
+            if (pointer == null || pointer.Locked) return false;
+            if (requireGaze && !ReferenceEquals(pointer.Current, this)) return false;
             var ray = new Ray(pointer.transform.position, pointer.transform.forward);
             var plane = new Plane(Vector3.up, Vector3.up * feltY);
             if (!plane.Raycast(ray, out float distance) || distance > pointer.maxDistance) return false;
             point = ray.GetPoint(distance);
-            return IsInsideField(point);
+            return IsInsideField(point, -AimMargin);
         }
 
-        bool TryShot(Vector3 point, out Vector3 direction, out float power)
+        bool TryDirection(Vector3 point, out Vector3 direction)
         {
             Vector3 offset = Flat(point - cueBall.Body.position);
-            float distance = offset.magnitude;
             direction = offset.normalized;
-            power = Mathf.InverseLerp(MinAimDistance, Mathf.Max(MinAimDistance + 0.01f, fullPowerDistance), distance);
-            return distance >= MinAimDistance;
+            return offset.magnitude >= MinAimDistance;
         }
 
         int PowerPercent(float power) => Mathf.RoundToInt(100f * Mathf.Lerp(Mathf.Min(minSpeed, maxSpeed), maxSpeed, power) / maxSpeed);
 
         void ClearAim()
         {
-            dwell = 0f;
-            hasStablePoint = false;
+            hasAim = false;
+            waitForRelease = false;
+            powerTime = 0f;
             scoreboard?.SetPower(-1);
             if (guide != null) guide.gameObject.SetActive(false);
             if (marker != null) marker.gameObject.SetActive(false);
@@ -459,7 +481,7 @@ namespace BarInteraccion
         public void ResetTable()
         {
             if (State == Phase.Rolling) return;
-            if (State == Phase.Aiming) SetIdle();
+            if (State == Phase.Aiming || State == Phase.Power) SetIdle();
             foreach (var ball in balls)
                 if (ball != null) ball.Respawn(ball.StartPosition);
             RefreshScoreboard();

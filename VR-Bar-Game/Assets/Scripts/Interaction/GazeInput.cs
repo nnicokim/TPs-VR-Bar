@@ -26,5 +26,21 @@ namespace BarInteraccion
 #endif
             return false;
         }
+
+        public static bool Held()
+        {
+#if ENABLE_INPUT_SYSTEM
+            var touch = Touchscreen.current;
+            if (touch != null && touch.primaryTouch.press.isPressed) return true;
+            var mouse = Mouse.current;
+            if (mouse != null && mouse.leftButton.isPressed) return true;
+            var keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.spaceKey.isPressed) return true;
+#endif
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (Input.GetMouseButton(0)) return true;
+#endif
+            return false;
+        }
     }
 }
