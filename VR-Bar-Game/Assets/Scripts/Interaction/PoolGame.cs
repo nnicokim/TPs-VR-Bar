@@ -535,7 +535,7 @@ namespace BarInteraccion
 
         void BuildGuide()
         {
-            var g = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            var g = RuntimeMaterials.CreatePrimitive(PrimitiveType.Cylinder);
             g.name = "Linea guia";
             g.transform.SetParent(transform, false);
             Destroy(g.GetComponent<Collider>());
