@@ -295,7 +295,7 @@ namespace BarInteraccion
 
         static Transform MakeCylinder(string name, Transform parent, Material mat, out Renderer renderer)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            var go = RuntimeMaterials.CreatePrimitive(PrimitiveType.Cylinder);
             go.name = name;
             var col = go.GetComponent<Collider>();
             if (col != null) Destroy(col);
@@ -309,11 +309,7 @@ namespace BarInteraccion
 
         static Material FallbackMaterial(Color c)
         {
-            var shader = Shader.Find("Universal Render Pipeline/Lit");
-            if (shader == null) return null;
-            var m = new Material(shader);
-            m.SetColor(BaseColorId, c);
-            return m;
+            return RuntimeMaterials.NewLit(c);
         }
     }
 }

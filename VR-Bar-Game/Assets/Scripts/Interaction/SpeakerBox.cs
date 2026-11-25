@@ -51,7 +51,7 @@ namespace BarInteraccion
 
         GameObject Part(PrimitiveType type, string name, Vector3 pos, Vector3 scale, Color color, bool keepCollider)
         {
-            var go = GameObject.CreatePrimitive(type);
+            var go = RuntimeMaterials.CreatePrimitive(type);
             go.name = name;
             if (!keepCollider) Object.Destroy(go.GetComponent<Collider>());
             go.transform.SetParent(transform, false);

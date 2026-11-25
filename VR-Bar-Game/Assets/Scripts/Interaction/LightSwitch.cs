@@ -43,7 +43,7 @@ namespace BarInteraccion
         void BuildSwitch()
         {
             // Placa
-            var plate = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var plate = RuntimeMaterials.CreatePrimitive(PrimitiveType.Cube);
             plate.name = "Placa";
             plate.transform.SetParent(transform, false);
             plate.transform.localScale = new Vector3(0.07f, 0.11f, 0.012f);
@@ -58,7 +58,7 @@ namespace BarInteraccion
             pivot.SetParent(transform, false);
             pivot.localPosition = new Vector3(0f, 0f, -0.008f);
             pivot.localRotation = Quaternion.Euler(-25f, 0f, 0f);
-            var stick = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var stick = RuntimeMaterials.CreatePrimitive(PrimitiveType.Cube);
             stick.name = "Tecla";
             Object.Destroy(stick.GetComponent<Collider>());
             stick.transform.SetParent(pivot, false);

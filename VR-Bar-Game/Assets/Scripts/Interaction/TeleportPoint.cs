@@ -127,7 +127,7 @@ namespace BarInteraccion
                 box.isTrigger = true;
                 box.size = new Vector3(0.32f, 0.32f, 0.32f);
 
-                var beamGo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                var beamGo = RuntimeMaterials.CreatePrimitive(PrimitiveType.Cylinder);
                 var col = beamGo.GetComponent<Collider>();
                 if (col != null) Destroy(col);
                 beamGo.name = "__haz";
