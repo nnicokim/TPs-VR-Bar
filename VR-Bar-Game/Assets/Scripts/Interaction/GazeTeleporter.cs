@@ -72,6 +72,7 @@ namespace BarInteraccion
             offset.y = 0f; // conserva la altura de los ojos
             transform.position += offset;
             SetCurrent(point);
+            SessionLog.Event("teletransporte", point.label);
 
             yield return null; // un frame en negro para que todo se acomode
             if (fader != null) yield return fader.FadeTo(0f, fadeIn);

@@ -170,7 +170,7 @@ namespace BarInteraccion
 
         Transform Box(string name, Vector3 localPos, Vector3 scale, Material mat)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var go = RuntimeMaterials.CreatePrimitive(PrimitiveType.Cube);
             go.name = name;
             var col = go.GetComponent<Collider>();
             if (col != null) Destroy(col);

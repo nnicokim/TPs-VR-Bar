@@ -189,7 +189,7 @@ namespace BarInteraccion
             var rnd = new System.Random(7);
             for (int i = 0; i < 3; i++)
             {
-                var ice = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                var ice = RuntimeMaterials.CreatePrimitive(PrimitiveType.Cube);
                 ice.name = "Hielo";
                 var c = ice.GetComponent<Collider>();
                 if (c != null) Destroy(c);
@@ -315,7 +315,7 @@ namespace BarInteraccion
 
         static Transform MakeCylinder(string name, Transform parent, Material mat, out Renderer renderer)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            var go = RuntimeMaterials.CreatePrimitive(PrimitiveType.Cylinder);
             go.name = name;
             var col = go.GetComponent<Collider>();
             if (col != null) Destroy(col);
@@ -329,8 +329,7 @@ namespace BarInteraccion
 
         static Material FallbackMaterial()
         {
-            var shader = Shader.Find("Universal Render Pipeline/Lit");
-            return shader != null ? new Material(shader) : null;
+            return RuntimeMaterials.NewLit(Color.white);
         }
     }
 }

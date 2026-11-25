@@ -140,6 +140,7 @@ namespace BarInteraccion
             roundScore += points;
             marks.Add(mark);
             thrown++;
+            SessionLog.Event("dardos", "tiro", $"{mark} ({points})");
             UpdatePanel();
             StartCoroutine(HitMarker(target));
             if (showCloseUp)
@@ -423,7 +424,7 @@ namespace BarInteraccion
             var root = new GameObject("Pizarrita dardos").transform;
             root.SetParent(transform.parent, true);
             root.SetPositionAndRotation(scorePanelPosition, Quaternion.LookRotation(-boardNormal, Vector3.up));
-            var plate = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var plate = RuntimeMaterials.CreatePrimitive(PrimitiveType.Cube);
             plate.name = "Tablero";
             Destroy(plate.GetComponent<Collider>());
             plate.transform.SetParent(root, false);

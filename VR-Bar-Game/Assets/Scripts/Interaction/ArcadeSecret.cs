@@ -81,6 +81,7 @@ namespace BarInteraccion
         {
             busy = true;
             hits++;
+            SessionLog.Event("arcade", "golpe", hits.ToString());
             if (hum != null) hum.SetVolumeScale(0.15f, 0f);
             Vector3 axis = Vector3.Cross(Vector3.up, screenNormal).normalized; // se hamaca hacia adelante y atrás
             Vector3 axisLocal = cabinet.parent != null ? cabinet.parent.InverseTransformDirection(axis) : axis;
@@ -102,6 +103,7 @@ namespace BarInteraccion
         IEnumerator Fix()
         {
             Fixed = true;
+            SessionLog.Event("arcade", "revive");
             // El cartel se despega y cae al piso.
             if (sign != null)
             {

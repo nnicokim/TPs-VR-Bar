@@ -70,6 +70,9 @@ namespace BarInteraccion
             card.dwellTime = 1.5f;
 
             card.StartCoroutine(card.Appear(rt));
+            SessionLog.Event("fin", "tarjeta final", summary);
+            SessionLog.Event("fin", "selecciones", $"mirada {SessionLog.DwellSelections}, toque {SessionLog.TapSelections}");
+            SessionLog.Flush();
             return card;
         }
 
@@ -90,6 +93,8 @@ namespace BarInteraccion
         {
             if (restarting) return;
             restarting = true;
+            SessionLog.Event("sesion", "reinicio");
+            SessionLog.Flush();
             StartCoroutine(Restart());
         }
 

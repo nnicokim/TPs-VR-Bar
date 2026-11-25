@@ -44,6 +44,8 @@ namespace BarAudio
         /// <summary>Multiplicador de volumen (para los actos: la música sube en la hora pico, la lluvia cuando se abre la puerta).</summary>
         public float VolumeScale { get; private set; } = 1f;
 
+        public bool IsPlaying => source != null && source.isPlaying;
+
         AudioSource source;
         float baseVolume;
         int lastClip = -1;
@@ -108,6 +110,20 @@ namespace BarAudio
             if (clip == null) return;
             source.loop = false;
             PlayClip(clip);
+        }
+
+        /// <summary>
+        /// Reproduce un clip determinado (no uno al azar) desde "position", con su variación de pitch.
+        /// "loudness" (0 a 1) escala el volumen: por ejemplo, la fuerza de un choque de bolas.
+        /// </summary>
+        public void PlaySpecific(AudioClip clip, Vector3 position, float loudness = 1f)
+        {
+            if (source == null || clip == null) return;
+            if (fade != null) { StopCoroutine(fade); fade = null; }
+            transform.position = position;
+            source.loop = false;
+            PlayClip(clip);
+            source.volume *= Mathf.Clamp01(loudness);
         }
 
         /// <summary>Mueve la fuente a "position" (para que el sonido salga de donde ocurre) y reproduce.</summary>

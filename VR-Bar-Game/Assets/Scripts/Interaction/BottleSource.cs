@@ -65,7 +65,7 @@ namespace BarInteraccion
             // El frente del cartel (donde está el texto) mira hacia "facing"; su +Z apunta al estante.
             root.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(-facing, Vector3.up));
 
-            var card = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var card = RuntimeMaterials.CreatePrimitive(PrimitiveType.Cube);
             card.name = "Tarjeta";
             card.transform.SetParent(root.transform, false);
             card.transform.localScale = new Vector3(tagSize.x, tagSize.y, 0.004f);

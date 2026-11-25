@@ -94,4 +94,6 @@ todo a 44,1 kHz y en **mono** (una fuente 3D se colapsa a un punto: el estéreo 
 - Etapa 3: `Dardos` tiene `automatic = false` (los dardos los tira el participante y suenan donde se clavan). En el cierre,
   el parlante y los zumbidos de neón se apagan con `BarSound.Silence` (fundido y no arranca el clip siguiente); el
   zumbido del arcade tartamudea con cada golpe y baja cuando revive.
-
+- Etapa 4: `Pool` tiene `automatic = false`. La toca el juego con `BarSound.PlaySpecific` (clip puntual en la posición del
+  choque): F1 la apertura (primer choque fuerte), F2 cada choque entre bolas (volumen según la velocidad), F3 la bola en la
+  tronera. No se agregó ninguna fuente nueva ni ningún sonido.
