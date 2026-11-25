@@ -80,3 +80,18 @@ todo a 44,1 kHz y en **mono** (una fuente 3D se colapsa a un punto: el estéreo 
 - `VR-Bar-Game/Assets/Scripts/Audio/` — `BarSound` y `EditorMouseLook`.
 - `VR-Bar-Game/Assets/Plugins/SteamAudio/` — plugin Steam Audio 4.8.1 (configuración en `Resources/SteamAudioSettings.asset`).
 - `Audio_Originales/` (no se sube a git) — descargas originales; se pueden volver a bajar con los links de `CREDITOS_AUDIO.md`.
+
+## Cambios por la interacción (ver `INTERACCION.md`)
+
+- `Canilla de cerveza`, `Puerta entrada`, `Abrir botella` y `Hielo` tienen `automatic = false`: ya no suenan solos,
+  los dispara lo que pasa en la escena (el participante sirve, un cliente entra). Se mueven a donde ocurre la acción.
+- Las puertas se abren cuando suena su sonido (`BarSound.Played`) y, con la de entrada abierta, la lluvia sube.
+- La música cambia de volumen según el acto (apertura, hora pico, cierre) con `BarSound.SetVolumeScale`.
+- Pista de la apertura: `Botellas (heladera)` suena un momento desde la botella pedida (para que el participante se dé
+  vuelta) y después vuelve a su lugar. No se agregó ninguna fuente nueva.
+- Trueno (A8, 3 tomas): fuente `[Etapa2] Trueno (ventana)` junto a la ventana, copiada de la lluvia para heredar su Steam
+  Audio (suena apagado por el vidrio). La dispara el relámpago 0,8–3 s después del destello. Total: 20 fuentes (límite real 32).
+- Etapa 3: `Dardos` tiene `automatic = false` (los dardos los tira el participante y suenan donde se clavan). En el cierre,
+  el parlante y los zumbidos de neón se apagan con `BarSound.Silence` (fundido y no arranca el clip siguiente); el
+  zumbido del arcade tartamudea con cada golpe y baja cuando revive.
+

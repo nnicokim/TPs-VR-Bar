@@ -1,5 +1,7 @@
+using System;
 using System.Collections;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace BarAudio
 {
@@ -24,6 +26,9 @@ namespace BarAudio
         [Tooltip("Activado: suena todo el tiempo (ambiente). Desactivado: un sonido cada tanto.")]
         public bool loop;
 
+        [Tooltip("Activado: suena solo, cada tanto. Desactivado: solo suena cuando lo dispara una interacción (PlayOnce).")]
+        public bool automatic = true;
+
         [Tooltip("Segundos de silencio entre un sonido y el siguiente (mín, máx). No se usa en loop.")]
         public Vector2 gap = new Vector2(10f, 30f);
 
@@ -33,9 +38,17 @@ namespace BarAudio
         [Tooltip("Pitch de cada disparo (mín, máx). Una variación chica disimula la repetición.")]
         public Vector2 pitch = new Vector2(0.95f, 1.05f);
 
+        /// <summary>Se dispara cada vez que empieza a sonar un clip (para sincronizar animaciones, ej. puertas).</summary>
+        public event Action<BarSound> Played;
+
+        /// <summary>Multiplicador de volumen (para los actos: la música sube en la hora pico, la lluvia cuando se abre la puerta).</summary>
+        public float VolumeScale { get; private set; } = 1f;
+
         AudioSource source;
         float baseVolume;
         int lastClip = -1;
+        Coroutine fade, scaleFade;
+        float clipVolume = 1f;
 
         void Awake()
         {
@@ -71,8 +84,9 @@ namespace BarAudio
             }
 
             source.loop = false;
+            if (!automatic) yield break; // lo dispara la interacción
             yield return new WaitForSeconds(Random.Range(0f, gap.x));
-            while (true)
+            while (automatic) // Silence() lo corta: no arranca el clip siguiente
             {
                 AudioClip clip = PickClip();
                 float length = 0f;
@@ -85,12 +99,86 @@ namespace BarAudio
             }
         }
 
+        /// <summary>Reproduce un clip al azar (con la misma variación de volumen y pitch). Para sonidos disparados por la interacción.</summary>
+        public void PlayOnce()
+        {
+            if (source == null || clips == null || clips.Length == 0) return;
+            if (fade != null) { StopCoroutine(fade); fade = null; }
+            AudioClip clip = PickClip();
+            if (clip == null) return;
+            source.loop = false;
+            PlayClip(clip);
+        }
+
+        /// <summary>Mueve la fuente a "position" (para que el sonido salga de donde ocurre) y reproduce.</summary>
+        public void PlayOnceAt(Vector3 position)
+        {
+            transform.position = position;
+            PlayOnce();
+        }
+
+        /// <summary>Apaga del todo: baja el volumen en "seconds" y deja de sonar solo (por ejemplo, al apagar el parlante).</summary>
+        public void Silence(float seconds)
+        {
+            automatic = false;
+            FadeOut(seconds);
+        }
+
+        /// <summary>Baja el volumen hasta cero en "seconds" y corta (por ejemplo, al cerrar la canilla).</summary>
+        public void FadeOut(float seconds)
+        {
+            if (source == null || !source.isPlaying) return;
+            if (fade != null) StopCoroutine(fade);
+            fade = StartCoroutine(FadeRoutine(seconds));
+        }
+
+        /// <summary>Lleva el multiplicador de volumen a "target" en "seconds" (afecta también al clip que está sonando).</summary>
+        public void SetVolumeScale(float target, float seconds)
+        {
+            if (scaleFade != null) StopCoroutine(scaleFade);
+            if (!isActiveAndEnabled || seconds <= 0f) { ApplyScale(target); return; }
+            scaleFade = StartCoroutine(ScaleRoutine(target, seconds));
+        }
+
+        IEnumerator ScaleRoutine(float target, float seconds)
+        {
+            float from = VolumeScale;
+            for (float t = 0f; t < seconds; t += Time.deltaTime)
+            {
+                ApplyScale(Mathf.Lerp(from, target, t / seconds));
+                yield return null;
+            }
+            ApplyScale(target);
+            scaleFade = null;
+        }
+
+        void ApplyScale(float scale)
+        {
+            VolumeScale = scale;
+            if (source != null && fade == null) source.volume = baseVolume * clipVolume * VolumeScale;
+        }
+
+        IEnumerator FadeRoutine(float seconds)
+        {
+            float start = source.volume;
+            for (float t = 0f; t < seconds; t += Time.deltaTime)
+            {
+                source.volume = Mathf.Lerp(start, 0f, t / seconds);
+                yield return null;
+            }
+            source.Stop();
+            source.volume = start;
+            fade = null;
+        }
+
         void PlayClip(AudioClip clip)
         {
             source.clip = clip;
             source.pitch = Random.Range(pitch.x, pitch.y);
-            source.volume = baseVolume * Random.Range(volume.x, volume.y);
+            clipVolume = Random.Range(volume.x, volume.y);
+            source.volume = baseVolume * clipVolume * VolumeScale;
             source.Play();
+            Played?.Invoke(this);
         }
 
         AudioClip PickClip()
@@ -104,7 +192,10 @@ namespace BarAudio
 
         // Se llama al agregar el componente en el Editor: deja el AudioSource y el
         // Steam Audio Source listos para un sonido 3D del bar.
-        void Reset()
+        void Reset() => ConfigureDefaults();
+
+        /// <summary>Deja el AudioSource y el Steam Audio Source listos para un sonido 3D del bar (lo que hace Reset).</summary>
+        public void ConfigureDefaults()
         {
             var s = GetComponent<AudioSource>();
             s.playOnAwake = false;
